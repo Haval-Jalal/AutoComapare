@@ -6,7 +6,7 @@
         {
             Console.WriteLine("Hello, World!");
             Console.WriteLine("Nemo");
-            Console.WriteLine("AutoCompare");
+            Console.WriteLine("qassem");
         }
     }
 }
