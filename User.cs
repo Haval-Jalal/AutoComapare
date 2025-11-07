@@ -58,6 +58,11 @@ public class SmtpSender : ISecondFactorSender
 
     public void SendEmailCode(string toEmail, string code)
     {
+        if (string.IsNullOrWhiteSpace(_fromEmail))
+            throw new InvalidOperationException("SMTP_FROM email is not set.");
+        if (string.IsNullOrWhiteSpace(toEmail))
+            throw new InvalidOperationException("Recipient email is not set.");
+
         using var message = new System.Net.Mail.MailMessage(_fromEmail, toEmail)
         {
             Subject = "Your 2FA Code",
