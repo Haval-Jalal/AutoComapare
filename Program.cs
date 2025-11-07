@@ -1,11 +1,11 @@
 ﻿namespace AutoCompare
 {
-    internal class Program
+    public class Program
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello, World!");
-            Console.WriteLine("Funkar den?");
+            MainMenu menu = new MainMenu();
+            menu.RunProgram();  
         }
     }
 }
