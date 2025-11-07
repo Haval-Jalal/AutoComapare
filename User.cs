@@ -221,13 +221,6 @@ public class User
         return ok;
     }
 
-    // Add a searched registration number
-    public void AddSearch(string regNumber)
-    {
-        if (!string.IsNullOrWhiteSpace(regNumber))
-            SearchHistory.Add(regNumber.Trim().ToUpperInvariant());
-    }
-
     // SHA256 hash function for passwords and codes
     private static string Sha256(string input)
     {
