@@ -42,13 +42,6 @@ namespace AutoCompare
                 carAge: carAge
             );
         }
-
-        ////Generera ett datum baserat på nuvarande datum minus ett antal bara år 
-        //private static DateTime NextDate(Random random, int v, DateTime now)
-        //{
-        //    return now.AddYears(-v);
-        //}
-
         //- EvaluateCar(Car car)
         public static string EvaluateCar(Car car)
         {
