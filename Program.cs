@@ -4,8 +4,7 @@
     {
         static void Main(string[] args)
         {
-            MainMenu menu = new MainMenu();
-            menu.RunProgram();  
+            CarSearch.ShowCarSearchMenu();
         }
     }
 }
