@@ -28,7 +28,7 @@ namespace AutoCompare
         public int Mileage { get; set; }
         public int Owners { get; set; }
         public int InsuranceClaims { get; set; }
-        public List<string> KnownIssues { get; set; }
+        public List<string> KnownIssues { get; set; }   //Listan är för närvarande bestämd till <string>. Vi kan återkomma till denna rad om vi stöter på probmel med json
         public Recommendation Recommendation { get; private set; }
         public DateTime CarAge { get; set; }
 
