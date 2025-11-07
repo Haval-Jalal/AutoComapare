@@ -73,11 +73,12 @@ public class SmtpSender : ISecondFactorSender
 
     public void SendSmsCode(string toPhone, string code)
     {
-        throw new NotImplementedException(); // Twilio to be implemented later
+        // TODO: SMS integration later
+        throw new NotImplementedException();
     }
 }
 
-// Helper class for password validation
+// Password validator
 public static class PasswordValidator
 {
     public static bool IsStrong(string password)
@@ -92,7 +93,7 @@ public static class PasswordValidator
 
 public class User
 {
-    public Guid Id { get; private set; } = Guid.NewGuid(); // Unique ID
+    public Guid Id { get; private set; } = Guid.NewGuid();
     public string Username { get; private set; } = string.Empty;
     public string PasswordHash { get; private set; } = string.Empty;
     public DateTime RegisteredAt { get; private set; }
@@ -101,52 +102,74 @@ public class User
     public string? PhoneNumber { get; private set; }
     public List<string> SearchHistory { get; } = new();
 
-    // Temporary storage for 2FA code (hash) and expiration
     private string? _pending2faCodeHash;
     private DateTime? _pending2faExpiresAt;
 
-    // Constructor
     public User() { }
 
-    // Register a new user
-    public bool Register(string username, string plainPassword, TwoFactorMethod method, string contactValue, List<User> allUsers)
+    // STARRED password input
+    public static string ReadHiddenPassword()
     {
-        // Check if username is already taken
+        StringBuilder input = new();
+        ConsoleKey key;
+
+        while (true)
+        {
+            var keyInfo = Console.ReadKey(true);
+            key = keyInfo.Key;
+
+            if (key == ConsoleKey.Enter)
+            {
+                Console.WriteLine();
+                break;
+            }
+            else if (key == ConsoleKey.Backspace)
+            {
+                if (input.Length > 0)
+                {
+                    input.Remove(input.Length - 1, 1);
+                    Console.Write("\b \b");
+                }
+            }
+            else
+            {
+                input.Append(keyInfo.KeyChar);
+                Console.Write("*");
+            }
+        }
+
+        return input.ToString();
+    }
+
+    // REGISTER
+    public bool Register(string username, string plainPassword, TwoFactorMethod method, string contact, List<User> allUsers)
+    {
         if (allUsers.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
         {
-            Console.WriteLine("Username already taken.");
+            Console.WriteLine("Username already taken, try again!");
             return false;
         }
 
-        // Check password strength
         if (!PasswordValidator.IsStrong(plainPassword))
         {
-            Console.WriteLine("Password is not strong enough.");
+            Console.WriteLine("Password is not strong enough, try again!");
             return false;
         }
 
         Username = username.Trim();
-        PasswordHash = Sha256(plainPassword); // Hash the password
+        PasswordHash = Sha256(plainPassword);
         TwoFactorChoice = method;
 
-        // Store 2FA contact info
-        switch (method)
-        {
-            case TwoFactorMethod.Email:
-                Email = contactValue.Trim();
-                PhoneNumber = null;
-                break;
-            case TwoFactorMethod.SMS:
-                PhoneNumber = contactValue.Trim();
-                Email = null;
-                break;
-        }
+        if (method == TwoFactorMethod.Email)
+            Email = contact.Trim();
+        else
+            PhoneNumber = contact.Trim();
 
         RegisteredAt = DateTime.UtcNow;
         return true;
     }
 
-    // Login (sends 2FA code)
+    // LOGIN
     public bool Login(string enteredPassword, ISecondFactorSender sender, ICodeGenerator generator)
     {
         if (!CheckPassword(enteredPassword))
@@ -155,25 +178,42 @@ public class User
             return false;
         }
 
-        // Send 2FA code
         SendTwoFactorCode(sender, generator, TimeSpan.FromMinutes(5));
         return true;
     }
 
-    // Logout
+    // FORGOT PASSWORD
+    public void ForgotPassword(ISecondFactorSender sender, ICodeGenerator generator)
+    {
+        SendTwoFactorCode(sender, generator, TimeSpan.FromMinutes(10));
+        Console.WriteLine("A reset code has been sent to your 2FA method.");
+    }
+
+    // RESET PASSWORD (AFTER 2FA)
+    public bool ResetPassword(string newPassword)
+    {
+        if (!PasswordValidator.IsStrong(newPassword))
+        {
+            Console.WriteLine("Password is not strong enough.");
+            return false;
+        }
+
+        PasswordHash = Sha256(newPassword);
+        Console.WriteLine("Password updated successfully.");
+        return true;
+    }
+
     public void Logout()
     {
         Console.WriteLine($"{Username} logged out.");
     }
 
-    // Delete account
     public void DeleteAccount(List<User> allUsers)
     {
         allUsers.Remove(this);
         Console.WriteLine($"{Username} account deleted.");
     }
 
-    // Show search history
     public void GetHistory()
     {
         Console.WriteLine($"Search history for {Username}:");
@@ -181,47 +221,36 @@ public class User
             Console.WriteLine(item);
     }
 
-    // Check password
     public bool CheckPassword(string enteredPassword)
     {
         return PasswordHash == Sha256(enteredPassword);
     }
 
-    // Send 2FA code
-    public void SendTwoFactorCode(ISecondFactorSender sender, ICodeGenerator generator, TimeSpan validity, int codeLength = 6)
+    public void SendTwoFactorCode(ISecondFactorSender sender, ICodeGenerator generator, TimeSpan validity, int len = 6)
     {
-        string code = generator.GenerateCode(codeLength);
+        string code = generator.GenerateCode(len);
 
         if (TwoFactorChoice == TwoFactorMethod.Email)
-        {
-            if (string.IsNullOrWhiteSpace(Email)) throw new InvalidOperationException("Email not set.");
-            sender.SendEmailCode(Email, code);
-        }
+            sender.SendEmailCode(Email!, code);
         else
-        {
-            if (string.IsNullOrWhiteSpace(PhoneNumber)) throw new InvalidOperationException("Phone number not set.");
-            sender.SendSmsCode(PhoneNumber, code);
-        }
+            sender.SendSmsCode(PhoneNumber!, code);
 
         _pending2faCodeHash = Sha256(code);
         _pending2faExpiresAt = DateTime.UtcNow.Add(validity);
     }
 
-    // Verify 2FA code
     public bool VerifyTwoFactorCode(string code)
     {
         if (_pending2faCodeHash is null || _pending2faExpiresAt is null) return false;
         if (DateTime.UtcNow > _pending2faExpiresAt.Value) return false;
 
         bool ok = _pending2faCodeHash == Sha256(code);
-
         _pending2faCodeHash = null;
         _pending2faExpiresAt = null;
 
         return ok;
     }
 
-    // SHA256 hash function for passwords and codes
     private static string Sha256(string input)
     {
         using var sha = SHA256.Create();
