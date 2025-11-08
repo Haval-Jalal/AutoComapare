@@ -19,7 +19,7 @@ namespace AutoCompare
         //Klass
         public class DataStore<T>
         {
-            //privat attribut
+            //privat attribut.
             public List<T> User = new List<T>();
             public List<T> Car = new List<T>();
             //user lista
