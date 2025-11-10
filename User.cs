@@ -2,14 +2,14 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
-// Two-factor authentication options
+// Enum that defines the available 2FA (Two-Factor Authentication) methods
 public enum TwoFactorMethod
 {
-    Email,
+    Email, 
     SMS
 }
 
-// Interface for 2FA sending
+// Interface that defines methods for sending 2FA codes
 public interface ISecondFactorSender
 {
     void SendEmailCode(string toEmail, string code);
@@ -19,28 +19,29 @@ public interface ISecondFactorSender
 // Interface for code generator
 public interface ICodeGenerator
 {
-    string GenerateCode(int length);
+    string GenerateCode(int length);    // Generates a random code with the given number of digits
 }
 
-// Numeric code generator for 2FA
+// Class that generates numeric 2FA codes
 public class NumericCodeGenerator : ICodeGenerator
 {
-    private static readonly char[] Digits = "0123456789".ToCharArray();
-    private readonly RandomNumberGenerator _rng = RandomNumberGenerator.Create();
+    private static readonly char[] Digits = "0123456789".ToCharArray(); // 0-9 digits
+    private readonly RandomNumberGenerator _rng = RandomNumberGenerator.Create(); // Cryptographically secure RNG
 
     public string GenerateCode(int length)
     {
-        var bytes = new byte[length];
-        _rng.GetBytes(bytes);
+        var bytes = new byte[length];  // Create a byte array to hold random data
+        _rng.GetBytes(bytes);     // Fill the array with secure random bytes
 
-        var sb = new StringBuilder(length);
+        var sb = new StringBuilder(length);   // Use StringBuilder for efficient string construction
         for (int i = 0; i < length; i++)
-            sb.Append(Digits[bytes[i] % Digits.Length]);
-        return sb.ToString();
+            sb.Append(Digits[bytes[i] % Digits.Length]);   // Map random byte to one of the 10 digits (0–9)
+
+        return sb.ToString();   // Return the final numeric code as a string
     }
 }
 
-// SMTP sender (reads info from .env)
+// Class that sends 2FA codes using an SMTP email server
 public class SmtpSender : ISecondFactorSender
 {
     private readonly string _smtpHost;
@@ -58,11 +59,14 @@ public class SmtpSender : ISecondFactorSender
 
     public void SendEmailCode(string toEmail, string code)
     {
+         // Check that sender and recipient emails are set
         if (string.IsNullOrWhiteSpace(_fromEmail))
             throw new InvalidOperationException("SMTP_FROM email is not set.");
         if (string.IsNullOrWhiteSpace(toEmail))
             throw new InvalidOperationException("Recipient email is not set.");
 
+
+        // Create the email message to send
         using var message = new System.Net.Mail.MailMessage(_fromEmail, toEmail)
         {
             Subject = "Your 2FA Code",
