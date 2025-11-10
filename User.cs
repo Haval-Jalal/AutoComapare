@@ -94,6 +94,8 @@ public static class PasswordValidator
     {
         if (string.IsNullOrWhiteSpace(password)) return false;
         if (password.Length < 6) return false;
+        if (password.Any(char.IsUpper)) return false;
+        if (password.Any(char.IsLower)) return false;
         if (!password.Any(char.IsDigit)) return false;
         if (!Regex.IsMatch(password, @"[!@#$%^&*(),.?""{}|<>]")) return false;
         return true;
@@ -151,9 +153,9 @@ public class User
     }
 
     // REGISTER
-    public bool Register(string username, string plainPassword, TwoFactorMethod method, string contact, List<User> allUsers)
+    public bool Register(string username, string plainPassword, TwoFactorMethod method, string contact, DataStore <User> userStore)
     {
-        if (allUsers.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
+        if (userStore.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
         {
             Console.WriteLine("Username already taken, try again!");
             return false;
@@ -217,9 +219,9 @@ public class User
         Console.WriteLine($"{Username} logged out.");
     }
 
-    public void DeleteAccount(List<User> allUsers)
+    public void DeleteAccount(DataStore <User> userStore)
     {
-        allUsers.Remove(this);
+        userStore.Remove(this);
         Console.WriteLine($"{Username} account deleted.");
     }
 
