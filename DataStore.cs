@@ -12,6 +12,9 @@ namespace AutoCompare
     //Klass
     public class DataStore<T>
     {
+
+        private readonly List<T> _items = new();
+
          //privat attribut.
         public List<User> userStore = new List<User>();//get; set;???
         public List<Car> carStore = new List<Car>();
