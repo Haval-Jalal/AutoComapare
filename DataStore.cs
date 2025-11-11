@@ -12,36 +12,38 @@ namespace AutoCompare
     //Klass
     public class DataStore<T>
     {
-
-        private readonly List<T> _items = new();
-
          //privat attribut.
         public List<User> userStore = new List<User>();//get; set;???
         public List<Car> carStore = new List<Car>();
         public List<CarSearch> carSearchStore = new List<CarSearch>();
        
 
+
         //Lägga till objekt
-        public void AddItem(User user)
+        //public void AddItem(User user)
+        //{
+        //    userStore.Add(user);
+        //    SaveToJson("users.json");
+        //}
+
+        //Metod för att lägga till objekt av generisk typ T
+        public void AddItem(T item)
         {
-            userStore.Add(user);
-            SaveToJson("users.json");
+            List.Add(item);
+            SaveToJson($"{typeof(T).Name.ToLower()}s.json");
         }
 
-        public bool RemoveItem(User user)
+        public bool RemoveItem(T item)
         {
-            bool removed = userStore.Remove(user); // tar bort från listan i minnet
+            bool removed = List.Remove(item);
             if (removed)
-                SaveToJson("users.json");         // uppdatera JSON-filen
+                SaveToJson($"{typeof(T).Name.ToLower()}s.json");
             return removed;
         }
 
-
-
-       
-        public Car? FindItem(Predicate<Car> predicate)
+        public T? FindItem(Predicate<T> predicate)
         {
-            return carStore.Find(predicate);
+            return List.Find(predicate);
         }
 
        
