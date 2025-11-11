@@ -1,6 +1,12 @@
-using System.Security.Cryptography;
+using System;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Security.Cryptography;
+using System.Collections.Generic;
+using Twilio; 
+using Twilio.Rest.Api.V2010.Account;
+
 namespace AutoCompare
 {
     // Enum that defines the available 2FA (Two-Factor Authentication) methods
@@ -42,7 +48,7 @@ namespace AutoCompare
         }
     }
 
-    // Class that sends 2FA codes using an SMTP email server
+    // Class that sends 2FA codes using an SMTP email servern + Twilio for SMS
     public class SmtpSender : ISecondFactorSender
     {
         private readonly string _smtpHost;
@@ -50,12 +56,20 @@ namespace AutoCompare
         private readonly string _fromEmail;
         private readonly string _password;
 
-        public SmtpSender(string email, string password, string host, int port)
+        private readonly string? _twilioSid;
+        private readonly string? _twilioAuthToken;
+        private readonly string? _twilioFromNumber;
+
+        public SmtpSender(string email, string password, string host, int port, string? twilioSid, string? twilioAuthToken, string? twilioFromNumber)
         {
             _fromEmail = email;
             _password = password;
             _smtpHost = host;
             _smtpPort = port;
+
+            _twilioSid = twilioSid;
+            _twilioAuthToken = twilioAuthToken;
+            _twilioFromNumber = twilioFromNumber;
         }
 
         public void SendEmailCode(string toEmail, string code)
@@ -83,8 +97,16 @@ namespace AutoCompare
 
         public void SendSmsCode(string toPhone, string code)
         {
-            // TODO: SMS integration later
-            throw new NotImplementedException();
+            // Check that sender and recipient sms settings are set
+            if (string.IsNullOrWhiteSpace(toPhone))
+               throw new InvalidOperationException("Recipient phone number is not set.");
+
+            TwilioClient.Init(_twilioSid, _twilioAuthToken);
+            var message = MessageResource.Create(
+                body: $"Your verification code is: {code}",
+                from: new Twilio.Types.PhoneNumber(_twilioFromNumber),
+                to: new Twilio.Types.PhoneNumber(toPhone)
+            );
         }
     }
 
@@ -95,8 +117,8 @@ namespace AutoCompare
         {
             if (string.IsNullOrWhiteSpace(password)) return false;
             if (password.Length < 6) return false;
-            if (password.Any(char.IsUpper)) return false;
-            if (password.Any(char.IsLower)) return false;
+            if (!password.Any(char.IsUpper)) return false;
+            if (!password.Any(char.IsLower)) return false;
             if (!password.Any(char.IsDigit)) return false;
             if (!Regex.IsMatch(password, @"[!@#$%^&*(),.?""{}|<>]")) return false;
             return true;
@@ -188,6 +210,39 @@ namespace AutoCompare
             if (!CheckPassword(enteredPassword))
             {
                 Console.WriteLine("Wrong password.");
+                return false;
+            }
+            // If user has BOTH an email and phone number → allow choice
+            if (Email != null && PhoneNumber != null)
+            {
+                Console.WriteLine("Choose verification method:");
+                Console.WriteLine("1. Email");
+                Console.WriteLine("2. SMS");
+                Console.Write("Your choice: ");
+
+                var choice = Console.ReadLine();
+
+                if (choice == "1")
+                    TwoFactorChoice = TwoFactorMethod.Email;
+                else if (choice == "2")
+                    TwoFactorChoice = TwoFactorMethod.SMS;
+                else
+                {
+                    Console.WriteLine("Invalid choice.");
+                    return false;
+                }
+            }
+            else if (Email != null)
+            {
+                TwoFactorChoice = TwoFactorMethod.Email;
+            }
+            else if (PhoneNumber != null)
+            {
+                TwoFactorChoice = TwoFactorMethod.SMS;
+            }
+            else
+            {
+                Console.WriteLine("User has neither email nor phone number configured.");
                 return false;
             }
 
