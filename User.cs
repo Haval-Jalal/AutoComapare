@@ -156,7 +156,8 @@ namespace AutoCompare
         // REGISTER
         public bool Register(string username, string plainPassword, TwoFactorMethod method, string contact, DataStore<User> userStore)
         {
-            if (userStore.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
+            userStore.LoadFromJson("users.json");
+            if (userStore.List.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
             {
                 Console.WriteLine("Username already taken, try again!");
                 return false;
@@ -222,8 +223,13 @@ namespace AutoCompare
 
         public void DeleteAccount(DataStore<User> userStore)
         {
-            userStore.RemoveItem(this);
-            Console.WriteLine($"{Username} account deleted.");
+            userStore.LoadFromJson("users.json");
+
+            bool removed = userStore.RemoveItem(this);
+            if (removed)
+                Console.WriteLine($"{Username} account deleted.");
+            else 
+                Console.WriteLine("Error deleting account.");
         }
 
         public void GetHistory()
