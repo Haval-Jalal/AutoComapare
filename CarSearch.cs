@@ -51,10 +51,9 @@ namespace AutoCompare
                 // Ask user if they want to evaluate another car
                 continueRunning = AnsiConsole.Confirm("\nDo you want to evaluate another car?");
 
-                //Save car search to a json file
-                var carSearchStore = new DataStore<CarSearch>();
-                carSearchStore.SaveToJson("carSearches.json");
-
+                ////Save car search to a json file
+                //var carSearchStore = new DataStore<CarSearch>();
+                //carSearchStore.SaveToJson("carSearches.json");
             }
         }
         //Metod för att hämta dummydata för en bil
