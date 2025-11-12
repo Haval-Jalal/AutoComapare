@@ -29,13 +29,13 @@ namespace AutoCompare
         public int Owners { get; set; }
         public int InsuranceClaims { get; set; }
         public List<string> KnownIssues { get; set; }   //Listan är för närvarande bestämd till <string>. Vi kan återkomma till denna rad om vi stöter på probmel med json
-        public Recommendation Recommendation { get; private set; }
+        public Recommendation Recommendation { get; set; }
         public DateTime CarAge { get; set; }
 
 
         // Konstruktor
         public Car(string regNumber, string brand, string model, int year, int mileage,
-                   int owners, int insuranceClaims, List<string> knownIssues) 
+                   int owners, int insuranceClaims, List<string> knownIssues, DateTime carAge) 
         {
             RegNumber = regNumber;
             Brand = brand;
@@ -47,6 +47,7 @@ namespace AutoCompare
             KnownIssues = knownIssues ?? new List<string>();
             CarAge = DateTime.Now;
             Recommendation = Recommendation.RiskyPurchase; 
+            CarAge = carAge;
         }
 
 
