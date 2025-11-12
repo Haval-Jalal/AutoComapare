@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -153,7 +154,7 @@ public class User
     }
 
     // REGISTER
-    public bool Register(string username, string plainPassword, TwoFactorMethod method, string contact, DataStore <User> userStore)
+    public bool Register(string username, string plainPassword, TwoFactorMethod method, string contact, IEnumerable<User> userStore)
     {
         if (userStore.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
         {
@@ -269,4 +270,12 @@ public class User
         var hash = sha.ComputeHash(bytes);
         return Convert.ToHexString(hash);
     }
+}
+
+
+
+// FÖR ATT TESTA MENY I UIMANAGER
+public class DataStore<T> : List<T>
+{
+    // You can add custom methods or properties here if needed.
 }
