@@ -48,7 +48,7 @@ namespace AutoCompare
         }
     }
 
-    // Class that sends 2FA codes using an SMTP email servern + Twilio for SMS
+    // Class that sends 2FA codes using an SMTP email server + Twilio for SMS
     public class SmtpSender : ISecondFactorSender
     {
         private readonly string _smtpHost;
