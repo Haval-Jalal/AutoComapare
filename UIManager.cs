@@ -1,229 +1,145 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Spectre.Console;
 
 namespace AutoCompare
 {
-    namespace AutoCompare
+    /// <summary>
+    /// UIManager handles the main menu and user flows.
+    /// It uses your existing DataStore<User> and TwoFactorService.
+    /// All console messages are in English.
+    /// </summary>
+    public class UIManager
     {
-        using Spectre.Console;
-        using System.Collections.Generic;
-        using System.Linq;
+        private readonly TwoFactorService _twoFactor;
+        private readonly DataStore<User> _userStore;
 
-        namespace AutoCompareApp
+        public UIManager()
         {
-            public class UIManager
+            _twoFactor = new TwoFactorService();
+            _userStore = new DataStore<User>(); // uses your existing DataStore<T> implementation
+        }
+
+        public void Start()
+        {
+            Console.WriteLine("===================================");
+            Console.WriteLine("  Welcome to AutoCompare");
+            Console.WriteLine("  A friendly assistant to compare cars for people who don't know much about cars.");
+            Console.WriteLine("===================================\n");
+
+            bool running = true;
+            while (running)
             {
+                Console.WriteLine("\nMain menu:");
+                Console.WriteLine("1) Register");
+                Console.WriteLine("2) Login");
+                Console.WriteLine("3) Exit");
+                Console.Write("Choice: ");
+                var choice = Console.ReadLine()?.Trim();
 
-                private readonly ISecondFactorSender _sender;
-                private readonly ICodeGenerator _codeGenerator;
-                private readonly DataStore<User> _userStore = new DataStore<User>();
-                // Tillfällig lista med användare i minnet (dummy)
-                private List<(string Username, string Password)> _users = new();
-                private string? _loggedInUser;
-
-                public void Start()
+                switch (choice)
                 {
-                    while (true)
-                    {
-                        AnsiConsole.Clear();
-                        var title = new FigletText("AutoCompare")
-                            .Color(Color.Green)
-                            .Centered();
-                        AnsiConsole.Write(title);
-                        AnsiConsole.WriteLine();
-
-                        var menu = new SelectionPrompt<string>()
-                            .Title("[yellow]Välj ett alternativ:[/]")
-                            .AddChoices(GetMenuChoices());
-
-                        var choice = AnsiConsole.Prompt(menu);
-
-                        switch (choice)
-                        {
-                            case "📝 Registrera dig":
-                                Register();
-                                break;
-                            case "🔐 Logga in":
-                                Login();
-                                break;
-                            case "📜 Visa profilinfo":
-                                ShowProfile();
-                                break;
-                            case "🚪 Logga ut":
-                                Logout();
-                                break;
-                            case "❌ Avsluta":
-                                return;
-                        }
-                    }
+                    case "1":
+                        var created = User.Register(_userStore, _twoFactor);
+                        if (created != null)
+                            Console.WriteLine("Registration completed.");
+                        break;
+                    case "2":
+                        var user = User.Login(_userStore, _twoFactor);
+                        if (user != null)
+                            ShowUserMenu(user);
+                        break;
+                    case "3":
+                        running = false;
+                        break;
+                    default:
+                        Console.WriteLine("Invalid choice.");
+                        break;
                 }
+            }
 
-                private IEnumerable<string> GetMenuChoices()
+            Console.WriteLine("Goodbye!");
+        }
+
+        private void ShowUserMenu(User user)
+        {
+            bool loggedIn = true;
+            while (loggedIn)
+            {
+                Console.WriteLine($"\nHello {user.Username} — choose an option:");
+                Console.WriteLine("1) Profile settings (reset password, delete account, change 2FA method)");
+                Console.WriteLine("2) Logout");
+                Console.Write("Choice: ");
+                var c = Console.ReadLine()?.Trim();
+
+                switch (c)
                 {
-                    if (_loggedInUser == null)
-                    {
-                        return new[] { "📝 Registrera dig", "🔐 Logga in", "❌ Avsluta" };
-                    }
-                    else
-                    {
-                        return new[] { "📜 Visa profilinfo", "🚪 Logga ut", "❌ Avsluta" };
-                    }
+                    case "1":
+                        ProfileSettings(user);
+                        break;
+                    case "2":
+                        Console.WriteLine("Logging out...");
+                        loggedIn = false;
+                        break;
+                    default:
+                        Console.WriteLine("Invalid choice.");
+                        break;
                 }
-
-                //REGISTRERA
-                private void Register()
-                {
-                    AnsiConsole.MarkupLine("[yellow]Registrering[/]");
-                    var username = AnsiConsole.Ask<string>("Ange användarnamn:");
-
-                    // Kontrollera om användarnamnet finns
-                    if (_userStore.FindUser(username) != null)
-                    {
-                        AnsiConsole.MarkupLine("[red]Användarnamnet är upptaget.[/]");
-                        Pause();
-                        return;
-                    }
-
-                    var password = ReadHiddenPassword("Ange lösenord:");
-
-                    // Välj 2FA-metod
-                    var method = AnsiConsole.Prompt(
-                        new SelectionPrompt<TwoFactorMethod>()
-                            .Title("Välj [green]2FA-metod[/]:")
-                            .AddChoices(TwoFactorMethod.Email, TwoFactorMethod.SMS));
-
-                    string contact;
-
-                    if (method == TwoFactorMethod.Email)
-                    {
-                        contact = AnsiConsole.Ask<string>("Ange e-postadress:");
-                    }
-                    else // SMS
-                    {
-                        contact = AnsiConsole.Ask<string>("Ange telefonnummer (inkl. landskod, t.ex. +46701234567):");
-                    }
-
-                    var tempUser = new User();
-
-                    if (!tempUser.Register(username, password, method, contact, _userStore))
-                    {
-                        AnsiConsole.MarkupLine("[red]Registrering misslyckades.[/]");
-                        Pause();
-                        return;
-                    }
-
-                    // Skicka 2FA-kod
-                    tempUser.SendTwoFactorCode(_sender, _codeGenerator, TimeSpan.FromMinutes(5));
-
-                    var code = AnsiConsole.Ask<string>("Ange verifieringskoden du fick:");
-
-                    if (!tempUser.VerifyTwoFactorCode(code))
-                    {
-                        AnsiConsole.MarkupLine("[red]Felaktig eller utgången kod.[/]");
-                        Pause();
-                        return;
-                    }
-
-                    _userStore.AddItem(tempUser);
-                    AnsiConsole.MarkupLine($"[green]Kontot {username} har verifierats och registrerats![/]");
-                    Pause();
-                }
-
-                //LOGGA IN
-                private void Login()
-                {
-                    AnsiConsole.MarkupLine("[yellow]Inloggning[/]");
-                    var username = AnsiConsole.Ask<string>("Ange användarnamn:");
-                    var password = ReadHiddenPassword("Ange lösenord:");
-
-                    var match = _users.FirstOrDefault(u => u.Username == username && u.Password == password);
-                    if (match == default)
-                    {
-                        AnsiConsole.MarkupLine("[red]Fel användarnamn eller lösenord.[/]");
-                    }
-                    else
-                    {
-                        _loggedInUser = username;
-                        AnsiConsole.MarkupLine($"[green]Välkommen tillbaka, {username}![/]");
-                    }
-                    Pause();
-                }
-
-                private void ShowProfile()
-                {
-                    if (_loggedInUser == null)
-                    {
-                        AnsiConsole.MarkupLine("[red]Du är inte inloggad.[/]");
-                        Pause();
-                        return;
-                    }
-
-                    AnsiConsole.Write(new Rule($"[bold yellow]{_loggedInUser}s profil[/]").RuleStyle("grey"));
-                    AnsiConsole.MarkupLine($"[green]Användarnamn:[/] {_loggedInUser}");
-                    AnsiConsole.MarkupLine("[grey](Inga fler uppgifter ännu — detta är bara en testmall.)[/]");
-                    Pause();
-                }
-
-                private void Logout()
-                {
-                    if (_loggedInUser != null)
-                    {
-                        AnsiConsole.MarkupLine($"[grey]{_loggedInUser} loggades ut.[/]");
-                        _loggedInUser = null;
-                    }
-                    Pause();
-                }
-
-                // Hjälpmetod för dold lösenordsinmatning
-                private string ReadHiddenPassword(string prompt)
-                {
-                    AnsiConsole.MarkupLine($"[grey]{prompt}[/]");
-                    var password = string.Empty;
-                    ConsoleKey key;
-
-                    while (true)
-                    {
-                        var keyInfo = Console.ReadKey(true);
-                        key = keyInfo.Key;
-
-                        if (key == ConsoleKey.Enter)
-                        {
-                            Console.WriteLine();
-                            break;
-                        }
-                        else if (key == ConsoleKey.Backspace)
-                        {
-                            if (password.Length > 0)
-                            {
-                                password = password[..^1];
-                                Console.Write("\b \b");
-                            }
-                        }
-                        else
-                        {
-                            password += keyInfo.KeyChar;
-                            Console.Write("*");
-                        }
-                    }
-
-                    return password;
-                }
-
-                private void Pause()
-                {
-                    AnsiConsole.MarkupLine("\nTryck på valfri tangent för att fortsätta...");
-                    Console.ReadKey(true);
-                }
-
-
-
-
             }
         }
 
+        private void ProfileSettings(User user)
+        {
+            Console.WriteLine("\nProfile settings:");
+            Console.WriteLine("1) Reset password");
+            Console.WriteLine("2) Delete account");
+            Console.WriteLine("3) Change 2FA method");
+            Console.Write("Choice: ");
+            var c = Console.ReadLine()?.Trim();
+
+            switch (c)
+            {
+                case "1":
+                    user.ForgotPassword(_userStore, _twoFactor);
+                    break;
+                case "2":
+                    Console.Write("Are you sure you want to delete your account? (y/n): ");
+                    if (Console.ReadLine()?.Trim().ToLower() == "y")
+                        user.DeleteAccount(_userStore);
+                    break;
+                case "3":
+                    ChangeTwoFactor(user);
+                    break;
+                default:
+                    Console.WriteLine("Invalid choice.");
+                    break;
+            }
+        }
+
+        private void ChangeTwoFactor(User user)
+        {
+            Console.WriteLine("Choose new 2FA method: 1) Email  2) SMS");
+            var choice = Console.ReadLine()?.Trim();
+            if (choice == "1")
+            {
+                Console.Write("Enter new email: ");
+                var email = Console.ReadLine()?.Trim() ?? "";
+                user.Email = email;
+                user.TwoFactorChoice = TwoFactorMethod.Email;
+                _userStore.SaveToJson("users.json");
+                Console.WriteLine("2FA method changed to Email.");
+            }
+            else if (choice == "2")
+            {
+                Console.Write("Enter phone number (international format): ");
+                var phone = Console.ReadLine()?.Trim() ?? "";
+                user.PhoneNumber = phone;
+                user.TwoFactorChoice = TwoFactorMethod.SMS;
+                _userStore.SaveToJson("users.json");
+                Console.WriteLine("2FA method changed to SMS.");
+            }
+            else
+            {
+                Console.WriteLine("Invalid choice.");
+            }
+        }
     }
 }
