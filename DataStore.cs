@@ -76,6 +76,8 @@ namespace AutoCompare
             {
                 var json = File.ReadAllText(filename);
                 List = System.Text.Json.JsonSerializer.Deserialize<List<T>>(json) ?? new List<T>();
+
+
             }
         }
     }

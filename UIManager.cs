@@ -21,10 +21,12 @@ namespace AutoCompare
                 private readonly ISecondFactorSender _sender;
                 private readonly ICodeGenerator _codeGenerator;
                 private readonly DataStore<User> _userStore = new DataStore<User>();
+                
                 // Tillfällig lista med användare i minnet (dummy)
                 private List<(string Username, string Password)> _users = new();
                 private string? _loggedInUser;
 
+               
                 public void Start()
                 {
                     while (true)
