@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace AutoCompare
 {
     public class CarSearch
-    {
+    { 
         private readonly DataStore<Car> _carSearchStore = new DataStore<Car>();
         private readonly DataStore<User> _userStore = new DataStore<User>();
 

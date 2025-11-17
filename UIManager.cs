@@ -14,7 +14,7 @@ namespace AutoCompare
 {
     public static class UIManager
     {
-        // Displays a welcome message to the user
+        // Displays a welcome message to the user 
         public static void DisplayWelcomeMessage()
         {
             AnsiConsole.Write(new Rule("[bold green]🚗 AutoCompare Tool 🚗[/]").RuleStyle("green").Centered());
