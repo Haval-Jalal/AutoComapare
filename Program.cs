@@ -1,6 +1,4 @@
-﻿using AutoCompare.AutoCompare.AutoCompareApp;
-
-namespace AutoCompare
+﻿namespace AutoCompare
 {
     internal class Program
     {
@@ -8,7 +6,6 @@ namespace AutoCompare
         {
             var ui = new UIManager();
             ui.Start();
-
         }
     }
 }
