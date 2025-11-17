@@ -81,7 +81,7 @@ namespace AutoCompare
                     var username = AnsiConsole.Ask<string>("Ange användarnamn:");
 
                     // Kontrollera om användarnamnet finns
-                    if (_userStore.FindUser(username) != null)
+                    if (_userStore.FindItem(u => u.Username == username) != null)
                     {
                         AnsiConsole.MarkupLine("[red]Användarnamnet är upptaget.[/]");
                         Pause();
