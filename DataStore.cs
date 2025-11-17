@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
@@ -13,10 +12,10 @@ namespace AutoCompare
     public class DataStore<T>
     {
         // //privat attribut.
-        //public List<User> userStore = new List<User>();//get; set;???
+        public List<User> userStore = new List<User>();//get; set;???
         //public List<Car> carStore = new List<Car>();
-        //public List<CarSearch> carSearchStore = new List<CarSearch>();
-       
+        public List<CarSearch> carSearchStore = new List<CarSearch>();
+
         public List<T> List { get; set; } = new List<T>();
 
 
@@ -76,6 +75,16 @@ namespace AutoCompare
             {
                 var json = File.ReadAllText(filename);
                 List = System.Text.Json.JsonSerializer.Deserialize<List<T>>(json) ?? new List<T>();
+            }
+        }
+
+        public void UpdateItem(T item)
+        {
+            // Find the index of the item to update (assuming T has a unique identifier, e.g., Id)
+            int index = List.FindIndex(x => x.Equals(item));
+            if (index != -1)
+            {
+                List[index] = item;
             }
         }
     }

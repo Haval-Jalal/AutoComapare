@@ -1,4 +1,5 @@
-﻿using AutoCompare.AutoCompare.AutoCompareApp;
+﻿using System;
+using AutoCompare;
 
 namespace AutoCompare
 {
@@ -6,9 +7,16 @@ namespace AutoCompare
     {
         static void Main(string[] args)
         {
-            var ui = new UIManager();
-            ui.Start();
+            //Ställ in konsolens utdata för att stödja UTF-8-tecken
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
 
+            //CarSearch carSearch = new CarSearch(); 
+            //carSearch.CarSearchMenu();
+
+            //var ui = new UIManager();
+            //ui.Start();
+
+            UIManager.StartMenu();
         }
     }
 }
