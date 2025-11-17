@@ -1,4 +1,5 @@
-﻿using Spectre.Console;
+﻿using Microsoft.Extensions.Logging;
+using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,12 +8,15 @@ namespace AutoCompare
 {
     public class UIManager
     {
+        private Admin _admin; // Remove 'readonly' keyword
+        private readonly Logger _logger = new Logger("logs.txt");
         private readonly DataStore<User> _userStore = new DataStore<User>();
         private string? _loggedInUser;
 
         public void Start()
         {
             _userStore.LoadFromJson("users.json");
+            _admin = new Admin(_userStore, _logger);
 
             while (true)
             {
@@ -55,11 +59,11 @@ namespace AutoCompare
         private void Register()
         {
             AnsiConsole.MarkupLine("[yellow]Registration[/]");
-            var username = AnsiConsole.Ask<string>("Enter username:").Trim();
+            var username = AnsiConsole.Ask<string>("Enter email:").Trim();
 
             if (_userStore.List.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
             {
-                AnsiConsole.MarkupLine("[red]Username already taken.[/]");
+                AnsiConsole.MarkupLine("[red]Email already registered![/]");
                 Pause();
                 return;
             }
@@ -91,18 +95,71 @@ namespace AutoCompare
             Pause();
         }
 
+        private void AdminPanel()
+        {
+            while (_admin.IsLoggedIn)
+            {
+                AnsiConsole.Clear();
+                string choice = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title("[red]ADMIN PANEL[/]")
+                        .AddChoices(
+                            "Show All Users",
+                            "Delete User",
+                            "Show Log Files",
+                            "Read Log File",
+                            "Exit Admin"
+                        ));
+
+                switch (choice)
+                {
+                    case "Show All Users":
+                        _admin.ShowAllUsers();
+                        Pause();
+                        break;
+
+                    case "Delete User":
+                        string userToDelete = AnsiConsole.Ask<string>("User to delete:");
+                        _admin.DeleteUser(userToDelete);
+                        Pause();
+                        break;
+
+                    case "Show Log Files":
+                        _admin.ShowLogFiles();
+                        Pause();
+                        break;
+
+                    case "Read Log File":
+                        string file = AnsiConsole.Ask<string>("Enter log filename:");
+                        _admin.ShowLogEntries(file);
+                        Pause();
+                        break;
+
+                    case "Exit Admin":
+                        return;
+                }
+            }
+        }
+
         private void Login()
         {
             AnsiConsole.MarkupLine("[yellow]Login[/]");
-            var username = AnsiConsole.Ask<string>("Enter username:").Trim();
+            var username = AnsiConsole.Ask<string>("Enter email:").Trim();
             var password = ReadHiddenPassword("Enter password:").Trim();
+           
+            //  HIDDEN ADMIN LOGIN            
+            if (_admin.TryLogin(username, password))
+            {
+                AdminPanel();
+                return;
+            }
 
             var user = _userStore.List.FirstOrDefault(u =>
                 u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
 
             if (user == null || !user.CheckPassword(password))
             {
-                AnsiConsole.MarkupLine("[red]Wrong username or password.[/]");
+                AnsiConsole.MarkupLine("[red]Wrong email or password.[/]");
                 Pause();
                 return;
             }
