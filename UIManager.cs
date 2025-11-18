@@ -23,32 +23,128 @@ namespace AutoCompare
                 AnsiConsole.Write(title);
                 AnsiConsole.WriteLine();
 
+                if (_loggedInUser == null)
+                {
+                    // Om användaren inte är inloggad
+                    var menu = new SelectionPrompt<string>()
+                        .Title("[yellow]Select an option:[/]")
+                        .AddChoices("📝 Register", "🔐 Login", "❌ Exit");
+
+                    var choice = AnsiConsole.Prompt(menu);
+
+                    switch (choice)
+                    {
+                        case "📝 Register":
+                            Register();
+                            break;
+                        case "🔐 Login":
+                            Login();
+                            break;
+                        case "❌ Exit":
+                            _userStore.SaveToJson("users.json");
+                            return;
+                    }
+                }
+                else
+                {
+                    // Huvudmeny när användaren är inloggad
+                    var menu = new SelectionPrompt<string>()
+                        .Title($"[yellow]Welcome {_loggedInUser}! Choose an option:[/]")
+                        .AddChoices("🚗 Search Car", "📜 Manage Profile", "🚪 Logout");
+
+                    var choice = AnsiConsole.Prompt(menu);
+
+                    switch (choice)
+                    {
+                        case "🚗 Search Car":
+                            SearchCarMenu();
+                            break;
+                        case "📜 Manage Profile":
+                            ManageProfile();
+                            break;
+                        case "🚪 Logout":
+                            Logout();
+                            break;
+                    }
+                }
+            }
+        }
+
+        private void SearchCarMenu()
+        {
+
+            var carSearch = new CarSearch();
+            var user = _userStore.List.First(u => u.Username == _loggedInUser);
+
+            bool running = true;
+            while (running)
+            {
                 var menu = new SelectionPrompt<string>()
-                    .Title("[yellow]Select an option:[/]")
-                    .AddChoices(_loggedInUser == null
-                        ? new[] { "📝 Register", "🔐 Login", "❌ Exit" }
-                        : new[] { "📜 Profile", "🚪 Logout", "❌ Exit" });
+                    .Title("[yellow]Search Car Menu:[/]")
+                    .AddChoices("🔍 Search by Registration Number", "📄 Show Search History", "🔙 Back");
 
                 var choice = AnsiConsole.Prompt(menu);
 
                 switch (choice)
                 {
-                    case "📝 Register":
-                        Register();
-                        break;
-                    case "🔐 Login":
-                        Login();
-                        break;
-                    case "📜 Profile":
-                        ShowProfile();
-                        break;
-                    case "🚪 Logout":
-                        Logout();
-                        break;
-                    case "❌ Exit":
+                    case "🔍 Search by Registration Number":
+                        string reg = AnsiConsole.Ask<string>("Enter registration number:");
+                        carSearch.SearchByRegNumber(reg);
+                        user.SearchHistory.Add(reg);
                         _userStore.SaveToJson("users.json");
-                        return;
+                        break;
+
+                    case "📄 Show Search History":
+                        if (user.SearchHistory.Count == 0)
+                        {
+                            AnsiConsole.MarkupLine("[grey]No previous searches.[/]");
+                        }
+                        else
+                        {
+                            AnsiConsole.MarkupLine("[green]Previous Searches:[/]");
+                            foreach (var item in user.SearchHistory)
+                                AnsiConsole.MarkupLine($"- {item}");
+                        }
+                        Pause();
+                        break;
+
+                    case "🔙 Back":
+                        running = false;
+                        break;
                 }
+            }
+        }
+
+        private void ManageProfile()
+        {
+            var user = _userStore.List.First(u => u.Username == _loggedInUser);
+            var menu = new SelectionPrompt<string>()
+                .Title("[yellow]Manage Profile:[/]")
+                .AddChoices("🔑 Reset Password", "🗑 Delete Account", "🔙 Back");
+
+            var choice = AnsiConsole.Prompt(menu);
+
+            switch (choice)
+            {
+                case "🔑 Reset Password":
+                    string newPassword = ReadHiddenPassword("Enter new password:");
+                    if (user.ResetPassword(newPassword))
+                        _userStore.SaveToJson("users.json");
+                    Pause();
+                    break;
+
+                case "🗑 Delete Account":
+                    if (AnsiConsole.Confirm($"Are you sure you want to delete account {_loggedInUser}?"))
+                    {
+                        user.DeleteAccount(_userStore);
+                        _loggedInUser = null;
+                        _userStore.SaveToJson("users.json");
+                    }
+                    Pause();
+                    break;
+
+                case "🔙 Back":
+                    break;
             }
         }
 
@@ -63,6 +159,7 @@ namespace AutoCompare
                 Pause();
                 return;
             }
+
 
             var password = ReadHiddenPassword("Enter password:");
 
@@ -106,7 +203,6 @@ namespace AutoCompare
                 Pause();
                 return;
             }
-
             bool verified = TwoFactor.Verify((global::TwoFactorMethod)(int)user.TwoFactorChoice, user.Email, user.PhoneNumber);
 
             if (!verified)
@@ -116,23 +212,10 @@ namespace AutoCompare
                 return;
             }
 
+
+
             _loggedInUser = user.Username;
             AnsiConsole.MarkupLine($"[green]Welcome back, {user.Username}![/]");
-            Pause();
-        }
-
-        private void ShowProfile()
-        {
-            if (_loggedInUser == null)
-            {
-                AnsiConsole.MarkupLine("[red]You are not logged in.[/]");
-                Pause();
-                return;
-            }
-
-            AnsiConsole.Write(new Rule($"[bold yellow]{_loggedInUser}'s profile[/]").RuleStyle("grey"));
-            AnsiConsole.MarkupLine($"[green]Username:[/] {_loggedInUser}");
-            AnsiConsole.MarkupLine("[grey](No additional info yet.)[/]");
             Pause();
         }
 

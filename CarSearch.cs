@@ -18,7 +18,6 @@ namespace AutoCompare
             while (continueRunning)
             {
                 Console.Clear();
-                regNumber = AnsiConsole.Ask<string>("Enter the [green]registration number[/] of the car to evaluate:");
                 Car car = GetDummyData(regNumber);
                 EvaluateCar(car);
 
