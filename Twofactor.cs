@@ -110,6 +110,8 @@ public class TwoFactor
         {
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"2FA: Error sending email: {ex.Message}");
+            if (ex.InnerException != null)
+                Console.WriteLine($"Inner: {ex.InnerException.Message}");
             Console.ResetColor();
             return false;
         }
