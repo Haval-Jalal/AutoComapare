@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace AutoCompare
 {
     //Klass
-    public class DataStore<T>
+     public class DataStore<T>
     {
         // //privat attribut.
         //public List<User> userStore = new List<User>();//get; set;???
