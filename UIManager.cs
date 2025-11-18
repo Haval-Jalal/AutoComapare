@@ -160,6 +160,7 @@ namespace AutoCompare
                 return;
             }
 
+
             var password = ReadHiddenPassword("Enter password:");
 
             var method = AnsiConsole.Prompt(
@@ -202,8 +203,16 @@ namespace AutoCompare
                 Pause();
                 return;
             }
+            bool verified = TwoFactor.Verify((global::TwoFactorMethod)(int)user.TwoFactorChoice, user.Email, user.PhoneNumber);
 
-    
+            if (!verified)
+            {
+                AnsiConsole.MarkupLine("[red]Login failed due to 2FA.[/]");
+                Pause();
+                return;
+            }
+
+
 
             _loggedInUser = user.Username;
             AnsiConsole.MarkupLine($"[green]Welcome back, {user.Username}![/]");
