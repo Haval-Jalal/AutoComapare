@@ -59,7 +59,7 @@ public class TwoFactor
     {
         try
         {
-            Env.Load(); // Läser .env
+            Env.Load(Path.Combine(AppContext.BaseDirectory, ".env")); // Läser .env
 
             string fromEmail = Environment.GetEnvironmentVariable("SMTP_EMAIL") ?? "";
             string password = Environment.GetEnvironmentVariable("SMTP_PASSWORD") ?? "";
