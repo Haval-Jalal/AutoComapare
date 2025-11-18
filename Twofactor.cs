@@ -59,7 +59,7 @@ public class TwoFactor
     {
         try
         {
-            Env.Load(); // Läser .env
+            Env.Load(Path.Combine(AppContext.BaseDirectory, ".env")); // Läser .env
 
             string fromEmail = Environment.GetEnvironmentVariable("SMTP_EMAIL") ?? "";
             string password = Environment.GetEnvironmentVariable("SMTP_PASSWORD") ?? "";
@@ -110,6 +110,8 @@ public class TwoFactor
         {
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"2FA: Error sending email: {ex.Message}");
+            if (ex.InnerException != null)
+                Console.WriteLine($"Inner: {ex.InnerException.Message}");
             Console.ResetColor();
             return false;
         }
