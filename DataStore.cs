@@ -1,44 +1,43 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.ConstrainedExecution;
-using System.Text;
-using System.Threading.Tasks;
-//using System.Text.Json;
-//using System.IO;
+using System.IO;
+using System.Text.Json;
+
 namespace AutoCompare
 {
-    //Klass
     public class DataStore<T>
     {
-        // //privat attribut.
-        //public List<User> userStore = new List<User>();//get; set;???
-        //public List<Car> carStore = new List<Car>();
-        //public List<CarSearch> carSearchStore = new List<CarSearch>();
-       
+        // The in-memory list that holds objects of type T
         public List<T> List { get; set; } = new List<T>();
 
+        // Optional explicit filename (can be set by caller). If null, default is used.
+        public string Filename { get; private set; }
 
-        //Lägga till objekt
-        //public void AddItem(User user)
-        //{
-        //    userStore.Add(user);
-        //    SaveToJson("users.json");
-        //}
+        // NEW: Constructor accepts optional filename override
+        public DataStore(string filename = null)
+        {
+            Filename = filename ?? GetDefaultFilename();
+        }
 
-        //Metod för att lägga till objekt av generisk typ T
+        // CHANGED: centralized default filename generation so it is consistent for all types
+        private string GetDefaultFilename()
+        {
+            return $"{typeof(T).Name.ToLower()}s.json"; // e.g. users.json, cars.json, carsearchs.json
+        }
+
+        // Add item and persist immediately
         public void AddItem(T item)
         {
             List.Add(item);
-            SaveToJson($"{typeof(T).Name.ToLower()}s.json");
+            SaveToJson(); // CHANGED: always save on mutation
         }
 
+        // Remove item and persist immediately
         public bool RemoveItem(T item)
         {
             bool removed = List.Remove(item);
             if (removed)
-                SaveToJson($"{typeof(T).Name.ToLower()}s.json");
+                SaveToJson();
             return removed;
         }
 
@@ -47,38 +46,32 @@ namespace AutoCompare
             return List.Find(predicate);
         }
 
-
-        //public List<string>? FindItemHistory(string username)
-        //{
-        //    User? user = userStore.Find(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-        //    return user?.SearchHistory;
-        //}
-
-
-        //public User? FindUser(string username)
-        //{
-        //    return userStore.Find(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-        //}
-
-
-
-        //#Steg 2
-        public void SaveToJson(string filename)
+        // Save using the configured filename
+        public void SaveToJson()
         {
-            var json = System.Text.Json.JsonSerializer.Serialize(List,
-                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(filename, json);
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNameCaseInsensitive = true,
+                // Preserve enum names as text by default
+            };
+            var json = JsonSerializer.Serialize(List, options);
+            File.WriteAllText(Filename, json);
         }
 
-        public void LoadFromJson(string filename)
+        // Load using the configured filename
+        public void LoadFromJson()
         {
-            if (File.Exists(filename))
+            if (!File.Exists(Filename))
             {
-                var json = File.ReadAllText(filename);
-                List = System.Text.Json.JsonSerializer.Deserialize<List<T>>(json) ?? new List<T>();
+                // NOTE: file missing => keep List as empty (default)
+                List = new List<T>();
+                return;
             }
+
+            var json = File.ReadAllText(Filename);
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            List = JsonSerializer.Deserialize<List<T>>(json, options) ?? new List<T>();
         }
     }
 }
-
-

@@ -1,157 +1,119 @@
-﻿using Microsoft.Extensions.Logging;
-using Spectre.Console;
+﻿using Spectre.Console;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace AutoCompare
 {
     public class UIManager
     {
-        private Admin _admin; // Remove 'readonly' keyword
-        private readonly Logger _logger = new Logger("logs.txt");
-        private readonly DataStore<User> _userStore = new DataStore<User>();
+        // CHANGED: UIManager now owns all DataStores and the Logger
+        private readonly DataStore<User> _userStore = new DataStore<User>("users.json");
+        private readonly DataStore<Car> _carStore = new DataStore<Car>("cars.json");
+        private readonly DataStore<CarSearch> _carSearchStore = new DataStore<CarSearch>("carsearchs.json");
+        private readonly Logger _logger = new Logger("logs/logs.json");
+        private readonly Admin _admin;
         private string? _loggedInUser;
 
+        // NEW: Background image URL placeholder (you can later use this to render ascii/coloured background)
+        // NOTE: For console apps we cannot directly show an image, but we can convert to ASCII or use ANSI art.
+        public string BackgroundImageUrl { get; set; } = "https://img.sm360.ca/ir/w640h390c/images/newcar/ca/2025/bmw/serie-8-coupe/m850i-xdrive/coupe/exteriorColors/2025_bmw_serie-8-coupe_ext_032_416.png"; // placeholder
+
+        public UIManager()
+        {
+            _admin = new Admin(_userStore, _logger);
+        }
+
+        // CHANGED: Load all data at program start
         public void Start()
         {
-            _userStore.LoadFromJson("users.json");
-            _admin = new Admin(_userStore, _logger);
+            // Load all datastores once at startup
+            _userStore.LoadFromJson();
+            _carStore.LoadFromJson();
+            _carSearchStore.LoadFromJson();
 
+            ShowIntroAnimation();
+
+            // Main loop
             while (true)
             {
                 AnsiConsole.Clear();
+
+                // Decorative centered header (larger)
                 var title = new FigletText("AutoCompare")
-                    .Color(Color.Green)
-                    .Centered();
+                    .Centered()
+                    .Color(Color.Green);
                 AnsiConsole.Write(title);
                 AnsiConsole.WriteLine();
 
                 if (_loggedInUser == null)
                 {
-                    // Om användaren inte är inloggad
-                    var menu = new SelectionPrompt<string>()
-                        .Title("[yellow]Select an option:[/]")
-                        .AddChoices("📝 Register", "🔐 Login", "❌ Exit");
-
-                    var choice = AnsiConsole.Prompt(menu);
-
-                    switch (choice)
-                    {
-                        case "📝 Register":
-                            Register();
-                            break;
-                        case "🔐 Login":
-                            Login();
-                            break;
-                        case "❌ Exit":
-                            _userStore.SaveToJson("users.json");
-                            return;
-                    }
+                    ShowGuestMenu();
                 }
                 else
                 {
-                    // Huvudmeny när användaren är inloggad
-                    var menu = new SelectionPrompt<string>()
-                        .Title($"[yellow]Welcome {_loggedInUser}! Choose an option:[/]")
-                        .AddChoices("🚗 Search Car", "📜 Manage Profile", "🚪 Logout");
-
-                    var choice = AnsiConsole.Prompt(menu);
-
-                    switch (choice)
-                    {
-                        case "🚗 Search Car":
-                            SearchCarMenu();
-                            break;
-                        case "📜 Manage Profile":
-                            ManageProfile();
-                            break;
-                        case "🚪 Logout":
-                            Logout();
-                            break;
-                    }
+                    ShowUserMenu();
                 }
+
+                var centeredText = new Panel("[yellow]Select an option:[/]")
+    .Border(BoxBorder.None)
+    .Expand()
+    .Padding(1, 1, 1, 1);
+
+                AnsiConsole.Write(centeredText);
             }
         }
 
-        private void SearchCarMenu()
+        // NEW: Centralized guest menu with arrow navigation and nicer layout
+        private void ShowGuestMenu()
         {
-
-            var carSearch = new CarSearch();
-            var user = _userStore.List.First(u => u.Username == _loggedInUser);
-
-            bool running = true;
-            while (running)
-            {
-                var menu = new SelectionPrompt<string>()
-                    .Title("[yellow]Search Car Menu:[/]")
-                    .AddChoices("🔍 Search by Registration Number", "📄 Show Search History", "🔙 Back");
-
-                var choice = AnsiConsole.Prompt(menu);
-
-                switch (choice)
-                {
-                    case "🔍 Search by Registration Number":
-                        string reg = AnsiConsole.Ask<string>("Enter registration number:");
-                        carSearch.SearchByRegNumber(reg);
-                        user.SearchHistory.Add(reg);
-                        _userStore.SaveToJson("users.json");
-                        break;
-
-                    case "📄 Show Search History":
-                        if (user.SearchHistory.Count == 0)
-                        {
-                            AnsiConsole.MarkupLine("[grey]No previous searches.[/]");
-                        }
-                        else
-                        {
-                            AnsiConsole.MarkupLine("[green]Previous Searches:[/]");
-                            foreach (var item in user.SearchHistory)
-                                AnsiConsole.MarkupLine($"- {item}");
-                        }
-                        Pause();
-                        break;
-
-                    case "🔙 Back":
-                        running = false;
-                        break;
-                }
-            }
-        }
-
-        private void ManageProfile()
-        {
-            var user = _userStore.List.First(u => u.Username == _loggedInUser);
             var menu = new SelectionPrompt<string>()
-                .Title("[yellow]Manage Profile:[/]")
-                .AddChoices("🔑 Reset Password", "🗑 Delete Account", "🔙 Back");
+                .Title("[yellow]Select an option:[/]")
+                .PageSize(10)
+                .AddChoices("📝 Register", "🔐 Login", "❌ Exit");
 
             var choice = AnsiConsole.Prompt(menu);
-
             switch (choice)
             {
-                case "🔑 Reset Password":
-                    string newPassword = ReadHiddenPassword("Enter new password:");
-                    if (user.ResetPassword(newPassword))
-                        _userStore.SaveToJson("users.json");
-                    Pause();
+                case "📝 Register":
+                    Register();
                     break;
-
-                case "🗑 Delete Account":
-                    if (AnsiConsole.Confirm($"Are you sure you want to delete account {_loggedInUser}?"))
-                    {
-                        user.DeleteAccount(_userStore);
-                        _loggedInUser = null;
-                        _userStore.SaveToJson("users.json");
-                    }
-                    Pause();
+                case "🔐 Login":
+                    Login();
                     break;
-
-                case "🔙 Back":
+                case "❌ Exit":
+                    // CHANGED: Do not save on Exit; saves happen on mutation in DataStore
+                    Environment.Exit(0);
                     break;
             }
         }
 
+        private void ShowUserMenu()
+        {
+            var menu = new SelectionPrompt<string>()
+                .Title($"[yellow]Welcome {_loggedInUser}! Choose an option:[/]")
+                .PageSize(10)
+                .AddChoices("🚗 Search Car", "📜 Manage Profile", "🛠 Admin Panel", "🚪 Logout");
+
+            var choice = AnsiConsole.Prompt(menu);
+            switch (choice)
+            {
+                case "🚗 Search Car":
+                    SearchCarMenu();
+                    break;
+                case "📜 Manage Profile":
+                    ManageProfile();
+                    break;
+                case "🛠 Admin Panel":
+                    if (_admin.TryLoginPrompt()) // NEW: spectre admin login prompt
+                        AdminPanel();
+                    break;
+                case "🚪 Logout":
+                    Logout();
+                    break;
+            }
+        }
+
+        // CHANGED: Register now uses the shared _userStore and DOES NOT call LoadFromJson
         private void Register()
         {
             AnsiConsole.MarkupLine("[yellow]Registration[/]");
@@ -163,7 +125,6 @@ namespace AutoCompare
                 Pause();
                 return;
             }
-
 
             var password = ReadHiddenPassword("Enter password:");
 
@@ -179,15 +140,15 @@ namespace AutoCompare
                 contact = AnsiConsole.Ask<string>("Enter phone number (with country code):");
 
             var tempUser = new User();
-            if (!tempUser.Register(username, password, method, contact, _userStore))
+            if (!tempUser.Register(username, password, method, contact))
             {
                 AnsiConsole.MarkupLine("[red]Registration failed.[/]");
                 Pause();
                 return;
             }
 
+            // CHANGED: Save by adding to the UIManager-owned _userStore (this will call SaveToJson automatically)
             _userStore.AddItem(tempUser);
-            _userStore.SaveToJson("users.json");
             AnsiConsole.MarkupLine($"[green]Account {username} registered![/]");
             Pause();
         }
@@ -197,79 +158,66 @@ namespace AutoCompare
             while (_admin.IsLoggedIn)
             {
                 AnsiConsole.Clear();
-                string choice = AnsiConsole.Prompt(
-                    new SelectionPrompt<string>()
-                        .Title("[red]ADMIN PANEL[/]")
-                        .AddChoices(
-                            "Show All Users",
-                            "Delete User",
-                            "Show Log Files",
-                            "Read Log File",
-                            "Exit Admin"
-                        ));
+                var options = new SelectionPrompt<string>()
+                    .Title("[red]ADMIN PANEL[/]")
+                    .AddChoices("Show All Users", "Delete User", "Show Log Files", "Read Log File", "Exit Admin");
 
+                var choice = AnsiConsole.Prompt(options);
                 switch (choice)
                 {
                     case "Show All Users":
                         _admin.ShowAllUsers();
                         Pause();
                         break;
-
                     case "Delete User":
                         string userToDelete = AnsiConsole.Ask<string>("User to delete:");
                         _admin.DeleteUser(userToDelete);
                         Pause();
                         break;
-
                     case "Show Log Files":
                         _admin.ShowLogFiles();
                         Pause();
                         break;
-
                     case "Read Log File":
                         string file = AnsiConsole.Ask<string>("Enter log filename:");
                         _admin.ShowLogEntries(file);
                         Pause();
                         break;
-
                     case "Exit Admin":
                         return;
                 }
             }
         }
 
+        // CHANGED: Login uses _userStore (shared)
         private void Login()
         {
             AnsiConsole.MarkupLine("[yellow]Login[/]");
             var username = AnsiConsole.Ask<string>("Enter email:").Trim();
             var password = ReadHiddenPassword("Enter password:").Trim();
-           
-            //  HIDDEN ADMIN LOGIN            
+
+            // Admin login check
             if (_admin.TryLogin(username, password))
             {
                 AdminPanel();
                 return;
             }
 
-            var user = _userStore.List.FirstOrDefault(u =>
-                u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-
+            var user = _userStore.List.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
             if (user == null || !user.CheckPassword(password))
             {
                 AnsiConsole.MarkupLine("[red]Wrong email or password.[/]");
                 Pause();
                 return;
             }
-            bool verified = TwoFactor.Verify((global::TwoFactorMethod)(int)user.TwoFactorChoice, user.Email, user.PhoneNumber);
 
+            bool verified = TwoFactor.Verify(user.TwoFactorChoice, user.Email, user.PhoneNumber);
             if (!verified)
             {
                 AnsiConsole.MarkupLine("[red]Login failed due to 2FA.[/]");
                 Pause();
                 return;
             }
-
-
 
             _loggedInUser = user.Username;
             AnsiConsole.MarkupLine($"[green]Welcome back, {user.Username}![/]");
@@ -286,11 +234,89 @@ namespace AutoCompare
             Pause();
         }
 
+        private void SearchCarMenu()
+        {
+            var carSearch = new CarSearch();
+            var user = _userStore.List.First(u => u.Username == _loggedInUser);
+
+            bool running = true;
+            while (running)
+            {
+                var menu = new SelectionPrompt<string>()
+                    .Title("[yellow]Search Car Menu:[/]")
+                    .AddChoices("🔍 Search by Registration Number", "📄 Show Search History", "🔙 Back");
+
+                var choice = AnsiConsole.Prompt(menu);
+                switch (choice)
+                {
+                    case "🔍 Search by Registration Number":
+                        string reg = AnsiConsole.Ask<string>("Enter registration number:");
+                        carSearch.SearchByRegNumberInteractive(reg);
+                        user.SearchHistory.Add(reg);
+                        _userStore.SaveToJson(); // persist search history change immediately
+                        break;
+                    case "📄 Show Search History":
+                        if (user.SearchHistory.Count == 0)
+                        {
+                            AnsiConsole.MarkupLine("[grey]No previous searches.[/]");
+                        }
+                        else
+                        {
+                            AnsiConsole.MarkupLine("[green]Previous Searches:[/]");
+                            foreach (var item in user.SearchHistory)
+                                AnsiConsole.MarkupLine($"- {item}");
+                        }
+                        Pause();
+                        break;
+                    case "🔙 Back":
+                        running = false;
+                        break;
+                }
+            }
+        }
+
+        private void ManageProfile()
+        {
+            var user = _userStore.List.First(u => u.Username == _loggedInUser);
+            var menu = new SelectionPrompt<string>()
+                .Title("[yellow]Manage Profile:[/]")
+                .AddChoices("🔑 Reset Password", "🗑 Delete Account", "🔙 Back");
+
+            var choice = AnsiConsole.Prompt(menu);
+            switch (choice)
+            {
+                case "🔑 Reset Password":
+                    string newPassword = ReadHiddenPassword("Enter new password:");
+                    if (user.ResetPassword(newPassword))
+                    {
+                        // DataStore won't detect property mutation automatically, so we Save explicitly
+                        _userStore.SaveToJson(); // CHANGED: Save after mutating user object
+                        AnsiConsole.MarkupLine("[green]Password updated[/]");
+                    }
+                    Pause();
+                    break;
+
+                case "🗑 Delete Account":
+                    if (AnsiConsole.Confirm($"Are you sure you want to delete account {_loggedInUser}?"))
+                    {
+                        bool removed = user.DeleteAccount(_userStore); // DeleteAccount uses userStore.RemoveItem
+                        if (removed)
+                        {
+                            _loggedInUser = null;
+                        }
+                    }
+                    Pause();
+                    break;
+
+                case "🔙 Back":
+                    break;
+            }
+        }
+
         private string ReadHiddenPassword(string prompt)
         {
             AnsiConsole.MarkupLine($"[grey]{prompt}[/]");
             var password = string.Empty;
-
             while (true)
             {
                 var keyInfo = Console.ReadKey(true);
@@ -313,7 +339,6 @@ namespace AutoCompare
                     Console.Write("*");
                 }
             }
-
             return password.Trim();
         }
 
@@ -321,6 +346,32 @@ namespace AutoCompare
         {
             AnsiConsole.MarkupLine("\nPress any key to continue...");
             Console.ReadKey(true);
+        }
+
+        public void ShowIntroAnimation()
+        {
+            AnsiConsole.Clear();
+
+            string car = "🚗💨";
+            string text = "AutoCompare";
+            int width = Console.WindowWidth;
+            int start = -20;
+            int end = width - text.Length - 5;
+
+            for (int pos = start; pos < end; pos++)
+            {
+                AnsiConsole.Clear();
+
+                string spacing = new string(' ', Math.Max(pos, 0));
+
+                // Draw car + text
+                AnsiConsole.MarkupLine($"[green]{spacing}{car} {text}[/]");
+
+                Thread.Sleep(20);
+            }
+
+            Thread.Sleep(500);
+            AnsiConsole.Clear();
         }
     }
 }
