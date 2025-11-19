@@ -9,7 +9,6 @@ namespace AutoCompare
         // CHANGED: UIManager now owns all DataStores and the Logger
         private readonly DataStore<User> _userStore = new DataStore<User>("users.json");
         private readonly DataStore<Car> _carStore = new DataStore<Car>("cars.json");
-        private readonly DataStore<CarSearch> _carSearchStore = new DataStore<CarSearch>("carsearchs.json");
         private readonly Logger _logger = new Logger("logs/logs.json");
         private readonly Admin _admin;
         private string? _loggedInUser;
@@ -29,7 +28,6 @@ namespace AutoCompare
             // Load all datastores once at startup
             _userStore.LoadFromJson();
             _carStore.LoadFromJson();
-            _carSearchStore.LoadFromJson();
 
             ShowIntroAnimation();
 
@@ -53,13 +51,6 @@ namespace AutoCompare
                 {
                     ShowUserMenu();
                 }
-
-                var centeredText = new Panel("[yellow]Select an option:[/]")
-    .Border(BoxBorder.None)
-    .Expand()
-    .Padding(1, 1, 1, 1);
-
-                AnsiConsole.Write(centeredText);
             }
         }
 
@@ -236,37 +227,36 @@ namespace AutoCompare
 
         private void SearchCarMenu()
         {
-            var carSearch = new CarSearch();
-            var user = _userStore.List.First(u => u.Username == _loggedInUser);
+            // FIXED: Pass _loggedInUser and _userStore to CarSearch constructor
+            var carSearch = new CarSearch(_loggedInUser, _userStore);
 
             bool running = true;
             while (running)
             {
+                Console.Clear();
+                carSearch.RenderSectionLayout(
+                    figletTitle: "Car Search",
+                    panelMessage: "Search for cars by registration number and manage your search history.",
+                    panelHeader: "Car Search Menu",
+                    ruleTitle: "AutoCompare - Car Search");
+                running = false;
+
+
                 var menu = new SelectionPrompt<string>()
                     .Title("[yellow]Search Car Menu:[/]")
-                    .AddChoices("🔍 Search by Registration Number", "📄 Show Search History", "🔙 Back");
+                    .AddChoices("🔍 Search by Registration Number", "📄 Show Search History", "🧹 Clear Search History", "🔙 Back");
 
                 var choice = AnsiConsole.Prompt(menu);
                 switch (choice)
                 {
                     case "🔍 Search by Registration Number":
-                        string reg = AnsiConsole.Ask<string>("Enter registration number:");
-                        carSearch.SearchByRegNumberInteractive(reg);
-                        user.SearchHistory.Add(reg);
-                        _userStore.SaveToJson(); // persist search history change immediately
+                        carSearch.SearchByRegNumber();
                         break;
                     case "📄 Show Search History":
-                        if (user.SearchHistory.Count == 0)
-                        {
-                            AnsiConsole.MarkupLine("[grey]No previous searches.[/]");
-                        }
-                        else
-                        {
-                            AnsiConsole.MarkupLine("[green]Previous Searches:[/]");
-                            foreach (var item in user.SearchHistory)
-                                AnsiConsole.MarkupLine($"- {item}");
-                        }
-                        Pause();
+                        carSearch.ShowSearchHistory(username: _loggedInUser!);
+                        break;
+                    case "🧹 Clear Search History":
+                        carSearch.ClearSearchHistory(username: _loggedInUser!);
                         break;
                     case "🔙 Back":
                         running = false;

@@ -8,7 +8,8 @@ namespace AutoCompare
     {
         GoodInvestment,
         Acceptable,
-        RiskyPurchase
+        RiskyPurchase,
+        Unknown
     }
 
     public class Car

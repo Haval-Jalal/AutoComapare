@@ -62,16 +62,18 @@ namespace AutoCompare
         // Load using the configured filename
         public void LoadFromJson()
         {
-            if (!File.Exists(Filename))
-            {
-                // NOTE: file missing => keep List as empty (default)
-                List = new List<T>();
-                return;
-            }
-
+            if (!File.Exists(Filename)) { List = new List<T>(); return; }
             var json = File.ReadAllText(Filename);
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            List = JsonSerializer.Deserialize<List<T>>(json, options) ?? new List<T>();
+            try
+            {
+                List = JsonSerializer.Deserialize<List<T>>(json, options) ?? new List<T>();
+            }
+            catch (NotSupportedException)
+            {
+                // Log the issue and reset to empty list
+                List = new List<T>();
+            }
         }
     }
 }

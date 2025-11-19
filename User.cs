@@ -30,7 +30,8 @@ namespace AutoCompare
         public TwoFactorMethod TwoFactorChoice { get; set; } = TwoFactorMethod.none;
         public string? Email { get; set; }
         public string? PhoneNumber { get; set; }
-        public List<string> SearchHistory { get; set; } = new List<string>();
+        //public List<string> SearchHistory { get; set; } = new List<string>();
+        public List<Car> SearchHistory { get; set; } = new List<Car>();
 
         public User() { }
 
