@@ -42,7 +42,7 @@ namespace AutoCompare
             return removed;
         }
 
-        public T? FindItem(Predicate<T> predicate)
+        public T? FindItem(Predicate<T> predicate)//LINQ?
         {
             return List.Find(predicate);
         }
