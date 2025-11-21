@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace AutoCompare
 {
@@ -124,6 +125,73 @@ namespace AutoCompare
             foreach (var line in File.ReadAllLines(path))
                 Console.WriteLine(line);
             Console.WriteLine("==============================\n");
+        }
+        // Display AI chat/search history interactively for all users or a specific user
+        public void ShowAiSearchHistoryInteractive()
+        {
+            AnsiConsole.Clear();
+            AnsiConsole.MarkupLine("[cyan]🤖 AI Chat/Search History[/]");
+            AnsiConsole.WriteLine();
+
+            // Build user choices
+            var userChoices = new List<string> { "All Users" };
+            userChoices.AddRange(_userStore.List.Select(u => u.Username));
+
+            // Prompt admin or user to select
+            var selectedUser = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[yellow]Select a user to view AI history (or All Users):[/]")
+                    .PageSize(10)
+                    .AddChoices(userChoices)
+            );
+
+            // Collect search history
+            IEnumerable<string> combinedHistory = selectedUser == "All Users"
+                ? _userStore.List.SelectMany(u => u.SearchHistory ?? new List<string>())
+                : _userStore.List.First(u => u.Username == selectedUser).SearchHistory ?? new List<string>();
+
+            // Order newest first
+            combinedHistory = combinedHistory.Reverse();
+
+            if (!combinedHistory.Any())
+            {
+                AnsiConsole.MarkupLine("[grey]No AI search entries available.[/]");
+                AnsiConsole.WriteLine("\nPress any key to continue...");
+                Console.ReadKey(true);
+                return;
+            }
+
+            // Display each entry in a simple panel
+            foreach (var entry in combinedHistory)
+            {
+                // Add spacing between entries for readability
+                AnsiConsole.WriteLine();
+
+                var panel = new Panel(EscapeMarkup(entry))
+                    .Border(BoxBorder.Rounded)
+                    .BorderColor(Color.Green)
+                    .Expand();
+
+                AnsiConsole.Write(panel);
+            }
+
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("\nPress any key to return...");
+            Console.ReadKey(true);
+        }
+
+        // Escape text safely for Spectre.Console
+        private string EscapeMarkup(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return string.Empty;
+            try
+            {
+                return Markup.Escape(text);
+            }
+            catch
+            {
+                return text.Replace("[", "(").Replace("]", ")");
+            }
         }
     }
 }

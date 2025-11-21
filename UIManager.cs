@@ -1,6 +1,7 @@
 ﻿using Spectre.Console;
 using System;
 using System.Linq;
+using System.Text;
 
 namespace AutoCompare
 {
@@ -23,10 +24,6 @@ namespace AutoCompare
         {
             _admin = new Admin(_userStore, _logger);
         }
-
-        // Duplicate Start method removed; use the async Task Start() implementation defined below.
-
-        // NEW: Centralized guest menu with arrow navigation and nicer layout
         private void ShowGuestMenu()
         {
             var menu = new SelectionPrompt<string>()
@@ -58,7 +55,6 @@ namespace AutoCompare
                 .AddChoices(
                     "🚗 Search Car",
                     "🤖 Ask AI about a Car Model",
-                    "📄 Show AI Search History", // ny val
                     "📜 Manage Profile",
                     "🛠 Admin Panel",
                     "🚪 Logout"
@@ -72,10 +68,7 @@ namespace AutoCompare
                     SearchCarMenu();
                     break;
                 case "🤖 Ask AI about a Car Model":
-                    await AskAiFlow();
-                    break;
-                case "📄 Show AI Search History":
-                    ShowAiSearchHistory();
+                    await AskAiChatLoop();
                     break;
                 case "📜 Manage Profile":
                     ManageProfile();
@@ -137,7 +130,7 @@ namespace AutoCompare
                 AnsiConsole.Clear();
                 var options = new SelectionPrompt<string>()
                     .Title("[red]ADMIN PANEL[/]")
-                    .AddChoices("Show All Users", "Delete User", "Show Log Files", "Read Log File", "Exit Admin");
+                    .AddChoices("Show All Users", "Show AI Search History", "Delete User", "Show Log Files", "Read Log File", "Exit Admin");
 
                 var choice = AnsiConsole.Prompt(options);
                 switch (choice)
@@ -145,6 +138,9 @@ namespace AutoCompare
                     case "Show All Users":
                         _admin.ShowAllUsers();
                         Pause();
+                        break;
+                    case "Show AI Search History":
+                        _admin.ShowAiSearchHistoryInteractive();
                         break;
                     case "Delete User":
                         string userToDelete = AnsiConsole.Ask<string>("User to delete:");
@@ -352,68 +348,6 @@ namespace AutoCompare
         }
 
         //AI 
-        private async Task AskAiFlow()
-        {
-            AnsiConsole.MarkupLine("[cyan]Ask AI about a Car Model[/]");
-
-            string question = AnsiConsole.Ask<string>("Enter car model or question:");
-
-            // Optional: top 3 relevant cars as context
-            var contextCars = _carStore.List
-                .Where(c => c.Model.Contains(question, StringComparison.OrdinalIgnoreCase)
-                        || c.Brand.Contains(question, StringComparison.OrdinalIgnoreCase))
-                .Take(3)
-                .ToList();
-
-            try
-            {
-                AiResult result = await _aiService.AskCarModelAsync(question, contextCars);
-
-                var panel = new Panel($"[bold]Answer:[/]\n{result.Answer}\n\n[bold]Summary:[/]\n{result.Summary}")
-                    .Header("AI Car Info")
-                    .Border(BoxBorder.Rounded)
-                    .Padding(1, 1, 1, 1)
-                    .Expand();
-
-                AnsiConsole.Write(panel);
-
-                // Save AI query to user's search history
-                var user = _userStore.List.First(u => u.Username == _loggedInUser);
-                string entry = $"{DateTime.UtcNow:yyyy-MM-dd HH:mm} | Q: {question} | Summary: {result.Summary}";
-                user.SearchHistory.Add(entry);
-                _userStore.SaveToJson();
-            }
-            catch (Exception ex)
-            {
-                AnsiConsole.MarkupLine($"[red]Error contacting AI: {ex.Message}[/]");
-            }
-
-            Pause();
-        }
-
-        // Show previous AI queries
-        private void ShowAiSearchHistory()
-        {
-            var user = _userStore.List.First(u => u.Username == _loggedInUser);
-
-            var aiHistory = user.SearchHistory
-                .Where(e => e.Contains("Summary:")) // filter AI entries
-                .ToList();
-
-            if (aiHistory.Count == 0)
-            {
-                AnsiConsole.MarkupLine("[grey]No AI searches yet.[/]");
-            }
-            else
-            {
-                AnsiConsole.MarkupLine("[green]AI Search History:[/]");
-                foreach (var item in aiHistory)
-                    AnsiConsole.MarkupLine($"- {item}");
-            }
-
-            Pause();
-        }
-
         public async Task Start()
         {
             _userStore.LoadFromJson();
@@ -449,5 +383,126 @@ namespace AutoCompare
                 AnsiConsole.Write(centeredText);
             }
         }
+
+        // AI Chat / Multi-turn Loop
+        // AskAiChatLoop: ChatGPT-style multi-turn AI chat for cars with minimal emojis and clean output
+        private async Task AskAiChatLoop()
+        {
+            AnsiConsole.MarkupLine("[cyan]🚗 AI Car Chat — ask about car models (type 'exit' to go back)[/]");
+            var helper = new AiHelper(); // AiHelper reads OPENAI_API_KEY from env
+
+            const string systemInstruction = 
+                "You are an expert automotive assistant. Answer clearly and factually. " +
+                "Use minimal headings, but emojis are allowed to mark pros, cons, and tips. " +
+                "✅ = positive / advantage, ⚠️ = caution / drawback, 🛠️ = maintenance / tip. " +
+                "When user asks follow-up questions, remember prior conversation context.";
+
+            var convo = new List<(string role, string content)> { ("system", systemInstruction) };
+            const int maxTurnsToKeep = 12;
+
+            while (true)
+            {
+                string userInput = AnsiConsole.Ask<string>("You:").Trim();
+                if (string.IsNullOrWhiteSpace(userInput)) continue;
+                if (userInput.Equals("exit", StringComparison.OrdinalIgnoreCase)) break;
+
+                convo.Add(("user", userInput));
+
+                // Keep recent context + system message
+                if (convo.Count > maxTurnsToKeep)
+                {
+                    var sys = convo.First(t => t.role == "system");
+                    var tail = convo.Where(t => t.role != "system").Skip(Math.Max(0, convo.Count - maxTurnsToKeep)).ToList();
+                    convo = new List<(string role, string content)> { sys };
+                    convo.AddRange(tail);
+                }
+
+                string assistantReply = string.Empty;
+
+                try
+                {
+                    assistantReply = await helper.ChatMessagesAsync(convo, model: "gpt-4o-mini", maxTokens: 1200, temperature: 0.0);
+                }
+                catch (Exception ex)
+                {
+                    AnsiConsole.MarkupLine($"[red]AI error:[/] {EscapeMarkup(ex.Message)}");
+                    convo.RemoveAt(convo.Count - 1); // remove user message so not resent
+                    continue;
+                }
+
+                convo.Add(("assistant", assistantReply));
+
+                // Display assistant reply nicely
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[green]🤖 AI:[/]");
+                foreach (var line in assistantReply.Split('\n'))
+                {
+                    string trimmed = line.Trim();
+
+                    if (trimmed.StartsWith("Pros:", StringComparison.OrdinalIgnoreCase) ||
+                        trimmed.StartsWith("✅"))
+                    {
+                        AnsiConsole.MarkupLine($"[green]{EscapeMarkup(trimmed)}[/]");
+                    }
+                    else if (trimmed.StartsWith("Cons:", StringComparison.OrdinalIgnoreCase) ||
+                            trimmed.StartsWith("⚠️"))
+                    {
+                        AnsiConsole.MarkupLine($"[yellow]{EscapeMarkup(trimmed)}[/]");
+                    }
+                    else if (trimmed.StartsWith("Tip:", StringComparison.OrdinalIgnoreCase) ||
+                            trimmed.StartsWith("🛠️"))
+                    {
+                        AnsiConsole.MarkupLine($"[cyan]{EscapeMarkup(trimmed)}[/]");
+                    }
+                    else
+                    {
+                        AnsiConsole.WriteLine(EscapeMarkup(trimmed));
+                    }
+                }
+                AnsiConsole.WriteLine();
+
+                // Follow-up or finish
+                var next = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title("Choose next action:")
+                        .AddChoices(new[] { "Ask follow-up", "Finish chat" })
+                );
+
+                if (next == "Finish chat") break;
+            }
+
+            // Save a short summary to user's search history
+            try
+            {
+                var user = _userStore.List.FirstOrDefault(u => u.Username == _loggedInUser);
+                if (user != null)
+                {
+                    var lastAssistant = convo.LastOrDefault(t => t.role == "assistant").content ?? string.Empty;
+                    var summary = lastAssistant.Length > 200 ? lastAssistant.Substring(0, 197) + "..." : lastAssistant;
+                    string entry = $"{DateTime.UtcNow:yyyy-MM-dd HH:mm} | 🤖 {EscapeMarkup(summary)}";
+                    user.SearchHistory ??= new List<string>();
+                    user.SearchHistory.Add(entry);
+                    _userStore.SaveToJson();
+                }
+            }
+            catch
+            {
+                // don't block user if save fails
+            }
+        }
+
+        // Escape text safely for Spectre.Console
+        private string EscapeMarkup(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return string.Empty;
+            try
+            {
+                return Markup.Escape(text);
+            }
+            catch
+            {
+                return text.Replace("[", "(").Replace("]", ")");
+            }
+        }
     }
-}
+}    
