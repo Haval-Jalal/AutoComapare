@@ -2,11 +2,10 @@
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
-            var ui = new UIManager();
-            ui.Start();
+            var uiManager = new UIManager();
+            await uiManager.Start();
         }
     }
 }

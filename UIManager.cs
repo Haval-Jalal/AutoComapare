@@ -13,6 +13,7 @@ namespace AutoCompare
         private readonly Logger _logger = new Logger("logs/logs.json");
         private readonly Admin _admin;
         private string? _loggedInUser;
+        private readonly AIService _aiService = new AIService();
 
         // NEW: Background image URL placeholder (you can later use this to render ascii/coloured background)
         // NOTE: For console apps we cannot directly show an image, but we can convert to ASCII or use ANSI art.
@@ -23,45 +24,7 @@ namespace AutoCompare
             _admin = new Admin(_userStore, _logger);
         }
 
-        // CHANGED: Load all data at program start
-        public void Start()
-        {
-            // Load all datastores once at startup
-            _userStore.LoadFromJson();
-            _carStore.LoadFromJson();
-            _carSearchStore.LoadFromJson();
-
-            ShowIntroAnimation();
-
-            // Main loop
-            while (true)
-            {
-                AnsiConsole.Clear();
-
-                // Decorative centered header (larger)
-                var title = new FigletText("AutoCompare")
-                    .Centered()
-                    .Color(Color.Green);
-                AnsiConsole.Write(title);
-                AnsiConsole.WriteLine();
-
-                if (_loggedInUser == null)
-                {
-                    ShowGuestMenu();
-                }
-                else
-                {
-                    ShowUserMenu();
-                }
-
-                var centeredText = new Panel("[yellow]Select an option:[/]")
-    .Border(BoxBorder.None)
-    .Expand()
-    .Padding(1, 1, 1, 1);
-
-                AnsiConsole.Write(centeredText);
-            }
-        }
+        // Duplicate Start method removed; use the async Task Start() implementation defined below.
 
         // NEW: Centralized guest menu with arrow navigation and nicer layout
         private void ShowGuestMenu()
@@ -87,24 +50,38 @@ namespace AutoCompare
             }
         }
 
-        private void ShowUserMenu()
+        private async Task ShowUserMenu()
         {
             var menu = new SelectionPrompt<string>()
                 .Title($"[yellow]Welcome {_loggedInUser}! Choose an option:[/]")
                 .PageSize(10)
-                .AddChoices("🚗 Search Car", "📜 Manage Profile", "🛠 Admin Panel", "🚪 Logout");
+                .AddChoices(
+                    "🚗 Search Car",
+                    "🤖 Ask AI about a Car Model",
+                    "📄 Show AI Search History", // ny val
+                    "📜 Manage Profile",
+                    "🛠 Admin Panel",
+                    "🚪 Logout"
+                );
 
             var choice = AnsiConsole.Prompt(menu);
+
             switch (choice)
             {
                 case "🚗 Search Car":
                     SearchCarMenu();
                     break;
+                case "🤖 Ask AI about a Car Model":
+                    await AskAiFlow();
+                    break;
+                case "📄 Show AI Search History":
+                    ShowAiSearchHistory();
+                    break;
                 case "📜 Manage Profile":
                     ManageProfile();
                     break;
                 case "🛠 Admin Panel":
-                    if (_admin.TryLoginPrompt()) // NEW: spectre admin login prompt
+                    if (_admin.TryLoginPrompt())
                         AdminPanel();
                     break;
                 case "🚪 Logout":
@@ -372,6 +349,105 @@ namespace AutoCompare
 
             Thread.Sleep(500);
             AnsiConsole.Clear();
+        }
+
+        //AI 
+        private async Task AskAiFlow()
+        {
+            AnsiConsole.MarkupLine("[cyan]Ask AI about a Car Model[/]");
+
+            string question = AnsiConsole.Ask<string>("Enter car model or question:");
+
+            // Optional: top 3 relevant cars as context
+            var contextCars = _carStore.List
+                .Where(c => c.Model.Contains(question, StringComparison.OrdinalIgnoreCase)
+                        || c.Brand.Contains(question, StringComparison.OrdinalIgnoreCase))
+                .Take(3)
+                .ToList();
+
+            try
+            {
+                AiResult result = await _aiService.AskCarModelAsync(question, contextCars);
+
+                var panel = new Panel($"[bold]Answer:[/]\n{result.Answer}\n\n[bold]Summary:[/]\n{result.Summary}")
+                    .Header("AI Car Info")
+                    .Border(BoxBorder.Rounded)
+                    .Padding(1, 1, 1, 1)
+                    .Expand();
+
+                AnsiConsole.Write(panel);
+
+                // Save AI query to user's search history
+                var user = _userStore.List.First(u => u.Username == _loggedInUser);
+                string entry = $"{DateTime.UtcNow:yyyy-MM-dd HH:mm} | Q: {question} | Summary: {result.Summary}";
+                user.SearchHistory.Add(entry);
+                _userStore.SaveToJson();
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]Error contacting AI: {ex.Message}[/]");
+            }
+
+            Pause();
+        }
+
+        // Show previous AI queries
+        private void ShowAiSearchHistory()
+        {
+            var user = _userStore.List.First(u => u.Username == _loggedInUser);
+
+            var aiHistory = user.SearchHistory
+                .Where(e => e.Contains("Summary:")) // filter AI entries
+                .ToList();
+
+            if (aiHistory.Count == 0)
+            {
+                AnsiConsole.MarkupLine("[grey]No AI searches yet.[/]");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[green]AI Search History:[/]");
+                foreach (var item in aiHistory)
+                    AnsiConsole.MarkupLine($"- {item}");
+            }
+
+            Pause();
+        }
+
+        public async Task Start()
+        {
+            _userStore.LoadFromJson();
+            _carStore.LoadFromJson();
+            _carSearchStore.LoadFromJson();
+
+            ShowIntroAnimation();
+
+            while (true)
+            {
+                AnsiConsole.Clear();
+
+                var title = new FigletText("AutoCompare")
+                    .Centered()
+                    .Color(Color.Green);
+                AnsiConsole.Write(title);
+                AnsiConsole.WriteLine();
+
+                if (_loggedInUser == null)
+                {
+                    ShowGuestMenu();
+                }
+                else
+                {
+                    await ShowUserMenu();
+                }
+
+                var centeredText = new Panel("[yellow]Select an option:[/]")
+                    .Border(BoxBorder.None)
+                    .Expand()
+                    .Padding(1, 1, 1, 1);
+
+                AnsiConsole.Write(centeredText);
+            }
         }
     }
 }
