@@ -1,3 +1,4 @@
+﻿using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -105,9 +106,118 @@ namespace AutoCompare
         }
 
         // FORGOT PASSWORD
-        public void ForgotPassword()
+        public void ForgotPassword(DataStore<User> userStore)
         {
-            Console.WriteLine("A reset code should be sent via your selected 2FA method.");
+            Console.Clear();
+            AnsiConsole.Write(new FigletText("Forgot Password").Centered().Color(Color.Yellow));
+            AnsiConsole.Write(new Rule("[yellow]Password Reset[/]").RuleStyle("grey").Centered());
+            AnsiConsole.WriteLine();
+
+            // Find user
+            string username = AnsiConsole.Ask<string>("Enter your [green]username[/]:").Trim();
+            var user = userStore.List.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+
+            if (user == null)
+            {
+                AnsiConsole.MarkupLine($"\n[red]✗ No account found:[/] [bold]{username}[/]");
+                if (AnsiConsole.Confirm("Would you like to register?"))
+                    Register(string.Empty, string.Empty, TwoFactorMethod.none, null); // Call to UIManager.Register would be better
+                return;
+            }
+
+            AnsiConsole.MarkupLine($"[green]✓ Account found:[/] [bold]{username}[/]");
+            AnsiConsole.MarkupLine("[yellow]Please verify your identity with 2FA.[/]\n");
+
+            bool hasEmail = !string.IsNullOrWhiteSpace(user.Email);
+            bool hasPhone = !string.IsNullOrWhiteSpace(user.PhoneNumber);
+
+            // 2FA verification loop
+            while (true)
+            {
+                var choices = new List<string>();
+                if (hasEmail) choices.Add("📧 Email");
+                if (hasPhone) choices.Add("📱 SMS");
+                if (!hasEmail) choices.Add("📧 Add Email");
+                if (!hasPhone) choices.Add("📱 Add Phone");
+                choices.Add("❌ Cancel");
+
+                var choice = AnsiConsole.Prompt(new SelectionPrompt<string>()
+                    .Title("Choose [yellow]2FA method[/]:")
+                    .AddChoices(choices));
+
+                if (choice == "❌ Cancel") { AnsiConsole.MarkupLine("[grey]Cancelled.[/]"); return; }
+
+                // Add missing contact info
+                if (choice == "📧 Add Email")
+                {
+                    user.Email = AnsiConsole.Ask<string>("Enter [blue]email[/]:").Trim();
+                    userStore.SaveToJson();
+                    hasEmail = true;
+                    AnsiConsole.MarkupLine("[green]✓ Saved![/]");
+                    continue;
+                }
+                if (choice == "📱 Add Phone")
+                {
+                    user.PhoneNumber = AnsiConsole.Ask<string>("Enter [blue]phone[/]:").Trim();
+                    userStore.SaveToJson();
+                    hasPhone = true;
+                    AnsiConsole.MarkupLine("[green]✓ Saved![/]");
+                    continue;
+                }
+
+                bool isEmail = choice == "📧 Email";
+                string contact = isEmail ? user.Email! : user.PhoneNumber!;
+                string label = isEmail ? "email" : "phone";
+
+                // Confirm or update contact
+                AnsiConsole.MarkupLine($"Current {label}: [blue]{contact}[/]");
+                if (!AnsiConsole.Confirm("Is this correct?"))
+                {
+                    contact = AnsiConsole.Ask<string>($"Enter new [blue]{label}[/]:").Trim();
+                    if (isEmail) user.Email = contact; else user.PhoneNumber = contact;
+                    userStore.SaveToJson();
+                    AnsiConsole.MarkupLine("[green]✓ Saved![/]");
+                }
+
+                // Send and verify code
+                AnsiConsole.MarkupLine($"Sending code to: [blue]{contact}[/]");
+                var method = isEmail ? TwoFactorMethod.Email : TwoFactorMethod.SMS;
+
+                if (TwoFactor.Verify(method, user.Email, user.PhoneNumber))
+                {
+                    AnsiConsole.MarkupLine("\n[green]✓ 2FA verified![/]\n");
+
+                    // Password reset with confirmation
+                    while (true)
+                    {
+                        var newPass = AnsiConsole.Prompt(new TextPrompt<string>("Enter [green]new password[/]:").Secret());
+                        var confirm = AnsiConsole.Prompt(new TextPrompt<string>("Confirm [green]password[/]:").Secret());
+
+                        if (newPass != confirm)
+                        {
+                            AnsiConsole.MarkupLine("[red]✗ Passwords do not match![/]\n");
+                            continue;
+                        }
+
+                        if (user.ResetPassword(newPass))
+                        {
+                            userStore.SaveToJson();
+                            AnsiConsole.MarkupLine("[green]✓ Password reset successfully![/]");
+                            Console.ReadKey(true);
+                            return;
+                        }
+                        AnsiConsole.MarkupLine("[red]✗ Reset failed. Try again.[/]");
+                    }
+                }
+
+                // Verification failed
+                AnsiConsole.MarkupLine("[red]✗ Verification failed.[/]\n");
+                bool canSwitch = isEmail ? hasPhone : hasEmail;
+                string other = isEmail ? "SMS" : "Email";
+
+                if (canSwitch && !AnsiConsole.Confirm($"Try {other} instead?"))
+                    return;
+            }
         }
 
         public bool ResetPassword(string newPassword)

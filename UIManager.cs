@@ -29,7 +29,7 @@ namespace AutoCompare
             var menu = new SelectionPrompt<string>()
                 .Title("[yellow]Select an option:[/]")
                 .PageSize(10)
-                .AddChoices("📝 Register", "🔐 Login", "❌ Exit");
+                .AddChoices("📝 Register", "🔐 Login", "🔑 Forgot Password", "❌ Exit");
 
             var choice = AnsiConsole.Prompt(menu);
             switch (choice)
@@ -39,6 +39,10 @@ namespace AutoCompare
                     break;
                 case "🔐 Login":
                     Login();
+                    break;
+                case "🔑 Forgot Password":
+                    User user = new User();
+                    user.ForgotPassword(_userStore);
                     break;
                 case "❌ Exit":
                     // CHANGED: Do not save on Exit; saves happen on mutation in DataStore
@@ -217,29 +221,19 @@ namespace AutoCompare
             {
                 var menu = new SelectionPrompt<string>()
                     .Title("[yellow]Search Car Menu:[/]")
-                    .AddChoices("🔍 Search by Registration Number", "📄 Show Search History", "🔙 Back");
+                    .AddChoices("🔍 Search by Registration Number", "📄 Show Search History", "🧹 Clear Search History", "🔙 Back");
 
                 var choice = AnsiConsole.Prompt(menu);
                 switch (choice)
                 {
                     case "🔍 Search by Registration Number":
-                        string reg = AnsiConsole.Ask<string>("Enter registration number:");
-                        carSearch.SearchByRegNumberInteractive(reg);
-                        user.SearchHistory.Add(reg);
-                        _userStore.SaveToJson(); // persist search history change immediately
+                         carSearch.SearchByRegNumber();
                         break;
                     case "📄 Show Search History":
-                        if (user.SearchHistory.Count == 0)
-                        {
-                            AnsiConsole.MarkupLine("[grey]No previous searches.[/]");
-                        }
-                        else
-                        {
-                            AnsiConsole.MarkupLine("[green]Previous Searches:[/]");
-                            foreach (var item in user.SearchHistory)
-                                AnsiConsole.MarkupLine($"- {item}");
-                        }
-                        Pause();
+                        carSearch.ShowSearchHistory(user.Username);
+                        break;
+                    case "🧹 Clear Search History":
+                        carSearch.ClearSearchHistory(user.Username);
                         break;
                     case "🔙 Back":
                         running = false;
