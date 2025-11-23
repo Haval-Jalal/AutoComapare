@@ -350,39 +350,50 @@ namespace AutoCompare
         //AI 
         public async Task Start()
         {
-            _userStore.LoadFromJson();
-            _carStore.LoadFromJson();
-            _carSearchStore.LoadFromJson();
-
-            ShowIntroAnimation();
-
-            while (true)
+            try
             {
-                AnsiConsole.Clear();
+                _userStore.LoadFromJson();
+                _carStore.LoadFromJson();
+                _carSearchStore.LoadFromJson();
 
-                var title = new FigletText("AutoCompare")
-                    .Centered()
-                    .Color(Color.Green);
-                AnsiConsole.Write(title);
-                AnsiConsole.WriteLine();
+                ShowIntroAnimation();
 
-                if (_loggedInUser == null)
+                while (true)
                 {
-                    ShowGuestMenu();
-                }
-                else
-                {
-                    await ShowUserMenu();
-                }
+                    AnsiConsole.Clear();
 
-                var centeredText = new Panel("[yellow]Select an option:[/]")
-                    .Border(BoxBorder.None)
-                    .Expand()
-                    .Padding(1, 1, 1, 1);
+                    var title = new FigletText("AutoCompare")
+                        .Centered()
+                        .Color(Color.Green);
+                    AnsiConsole.Write(title);
+                    AnsiConsole.WriteLine();
 
-                AnsiConsole.Write(centeredText);
+                    if (_loggedInUser == null)
+                    {
+                        ShowGuestMenu();
+                    }
+                    else
+                    {
+                        await ShowUserMenu();
+                    }
+
+                    var centeredText = new Panel("[yellow]Select an option:[/]")
+                        .Border(BoxBorder.None)
+                        .Expand()
+                        .Padding(1, 1, 1, 1);
+
+                    AnsiConsole.Write(centeredText);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Log("system", "Start", ex.ToString());
+                AnsiConsole.MarkupLine($"[red]Critical error in Start():[/] {Markup.Escape(ex.Message)}");
             }
         }
+
+
+
 
         // AI Chat / Multi-turn Loop
         // AskAiChatLoop: ChatGPT-style multi-turn AI chat for cars with minimal emojis and clean output

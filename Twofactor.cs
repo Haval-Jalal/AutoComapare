@@ -105,6 +105,7 @@ namespace AutoCompare
             }
             catch (Exception ex)
             {
+                Logger.Log($"EmailVerification error: {ex.Message}");
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"2FA: Error sending email: {ex.Message}");
                 Console.ResetColor();
@@ -169,6 +170,7 @@ namespace AutoCompare
             }
             catch (Exception ex)
             {
+                Logger.Log($"SMSVerification error: {ex.Message}");
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"2FA: Error sending SMS: {ex.Message}");
                 Console.ResetColor();
