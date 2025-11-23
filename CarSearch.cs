@@ -35,65 +35,81 @@ namespace AutoCompare
 
         public void EvaluateCar(Car car)
         {
-            int carAge = DateTime.Now.Year - car.Year;
-            string message;
-            Spectre.Console.Color panelColor;
-
-            if (car.Mileage > 200000 && carAge > 12)
+            try
             {
-                car.Recommendation = Recommendation.RiskyPurchase;
-                message = "[red]Risky Purchase:[/] High mileage, several known issues, many previous owners, and an older vehicle age.";
-                panelColor = Spectre.Console.Color.Red;
-            }
-            else if (car.Mileage < 100000 && carAge < 5)
-            {
-                car.Recommendation = Recommendation.GoodInvestment;
-                message = "[green]Good Investment:[/] Low mileage, minimal issues, few previous owners, and a relatively new model.";
-                panelColor = Spectre.Console.Color.Green;
-            }
-            else
-            {
-                car.Recommendation = Recommendation.Acceptable;
-                message = "[yellow]Acceptable:[/] Moderate mileage, some known issues, average ownership history, or mid-range vehicle age.";
-                panelColor = Spectre.Console.Color.Yellow;
-            }
+                int carAge = DateTime.Now.Year - car.Year;
+                string message;
+                Spectre.Console.Color panelColor;
 
-            var panel = new Panel(message)
-                .Header("Car Evaluation", Justify.Center)
-                .Border(BoxBorder.Rounded)
-                .BorderStyle(new Style(panelColor))
-                .Padding(1, 1, 1, 1);
+                if (car.Mileage > 200000 && carAge > 12)
+                {
+                    car.Recommendation = Recommendation.RiskyPurchase;
+                    message = "[red]Risky Purchase:[/] High mileage, several known issues, many previous owners, and an older vehicle age.";
+                    panelColor = Spectre.Console.Color.Red;
+                }
+                else if (car.Mileage < 100000 && carAge < 5)
+                {
+                    car.Recommendation = Recommendation.GoodInvestment;
+                    message = "[green]Good Investment:[/] Low mileage, minimal issues, few previous owners, and a relatively new model.";
+                    panelColor = Spectre.Console.Color.Green;
+                }
+                else
+                {
+                    car.Recommendation = Recommendation.Acceptable;
+                    message = "[yellow]Acceptable:[/] Moderate mileage, some known issues, average ownership history, or mid-range vehicle age.";
+                    panelColor = Spectre.Console.Color.Yellow;
+                }
 
-            AnsiConsole.Write(panel);
+                var panel = new Panel(message)
+                    .Header("Car Evaluation", Justify.Center)
+                    .Border(BoxBorder.Rounded)
+                    .BorderStyle(new Style(panelColor))
+                    .Padding(1, 1, 1, 1);
+
+                AnsiConsole.Write(panel);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"EvaluateCar error: {ex.Message}");
+                AnsiConsole.MarkupLine("[red]An error occurred while evaluating the car.[/]");
+            }
         }
 
         // Search loop kept in UIManager (no Save here)
         public void SearchByRegNumberInteractive(string regNumber)
         {
-            var car = GetDummyData(regNumber);
-            EvaluateCar(car);
-
-            var table = new Table().Title("[bold underline cyan]Car Information[/]");
-            table.AddColumn("Property");
-            table.AddColumn("Value");
-            table.AddRow("Registration", car.RegNumber);
-            table.AddRow("Make", car.Brand);
-            table.AddRow("Model", car.Model);
-            table.AddRow("Year", car.Year.ToString());
-            table.AddRow("Mileage", $"{car.Mileage} km");
-            table.AddRow("Owners", car.Owners.ToString());
-            table.AddRow("Insurance Claims", car.InsuranceClaims.ToString());
-            table.AddRow("Known Issues", string.Join(", ", car.KnownIssues));
-            string recommendationText = car.Recommendation switch
+            try
             {
-                Recommendation.RiskyPurchase => "[red]Risky Purchase[/]",
-                Recommendation.Acceptable => "[yellow]Acceptable[/]",
-                Recommendation.GoodInvestment => "[green]Good Investment[/]",
-                _ => "[grey]Unknown[/]"
-            };
-            table.AddRow("Recommendation", recommendationText);
-            table.AddRow("Car Age", $"{DateTime.Now.Year - car.Year} years");
-            AnsiConsole.Write(table);
+                var car = GetDummyData(regNumber);
+                EvaluateCar(car);
+
+                var table = new Table().Title("[bold underline cyan]Car Information[/]");
+                table.AddColumn("Property");
+                table.AddColumn("Value");
+                table.AddRow("Registration", car.RegNumber);
+                table.AddRow("Make", car.Brand);
+                table.AddRow("Model", car.Model);
+                table.AddRow("Year", car.Year.ToString());
+                table.AddRow("Mileage", $"{car.Mileage} km");
+                table.AddRow("Owners", car.Owners.ToString());
+                table.AddRow("Insurance Claims", car.InsuranceClaims.ToString());
+                table.AddRow("Known Issues", string.Join(", ", car.KnownIssues));
+                string recommendationText = car.Recommendation switch
+                {
+                    Recommendation.RiskyPurchase => "[red]Risky Purchase[/]",
+                    Recommendation.Acceptable => "[yellow]Acceptable[/]",
+                    Recommendation.GoodInvestment => "[green]Good Investment[/]",
+                    _ => "[grey]Unknown[/]"
+                };
+                table.AddRow("Recommendation", recommendationText);
+                table.AddRow("Car Age", $"{DateTime.Now.Year - car.Year} years");
+                AnsiConsole.Write(table);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"SearchByRegNumberInteractive error: {ex.Message}");
+                AnsiConsole.MarkupLine("[red]An error occurred while searching/displaying the car information.[/]");
+            }
         }
     }
 }
