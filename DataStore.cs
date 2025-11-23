@@ -49,29 +49,49 @@ namespace AutoCompare
         // Save using the configured filename
         public void SaveToJson()
         {
-            var options = new JsonSerializerOptions
+            try
             {
-                WriteIndented = true,
-                PropertyNameCaseInsensitive = true,
-                // Preserve enum names as text by default
-            };
-            var json = JsonSerializer.Serialize(List, options);
-            File.WriteAllText(Filename, json);
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNameCaseInsensitive = true,
+                    // Preserve enum names as text by default
+                };
+                var json = JsonSerializer.Serialize(List, options);
+                File.WriteAllText(Filename, json);
+            }
+            catch (Exception ex)
+            {
+                // Logga felet utan att bryta programmet
+                Logger.Log($"SaveToJson failed for file '{Filename}': {ex.Message}");
+            }
         }
+
 
         // Load using the configured filename
         public void LoadFromJson()
         {
-            if (!File.Exists(Filename))
+            try
             {
-                // NOTE: file missing => keep List as empty (default)
-                List = new List<T>();
-                return;
-            }
+                if (!File.Exists(Filename))
+                {
+                    // NOTE: file missing => keep List as empty (default)
+                    List = new List<T>();
+                    return;
+                }
 
-            var json = File.ReadAllText(Filename);
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            List = JsonSerializer.Deserialize<List<T>>(json, options) ?? new List<T>();
+                var json = File.ReadAllText(Filename);
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                List = JsonSerializer.Deserialize<List<T>>(json, options) ?? new List<T>();
+            }
+            catch (Exception ex)
+            {
+                // Logga felet utan att krascha programmet
+                Logger.Log($"LoadFromJson failed for file '{Filename}': {ex.Message}");
+                // Säkerställ att List är tom om ett fel inträffar
+                List = new List<T>();
+            }
         }
+
     }
 }

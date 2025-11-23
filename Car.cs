@@ -27,19 +27,38 @@ namespace AutoCompare
         public Car() { } // NEW: parameterless constructor for deserialization
 
         public Car(string regNumber, string brand, string model, int year, int mileage,
-                   int owners, int insuranceClaims, List<string> knownIssues, DateTime carAge)
+            int owners, int insuranceClaims, List<string> knownIssues, DateTime carAge)
         {
-            RegNumber = regNumber;
-            Brand = brand;
-            Model = model;
-            Year = year;
-            Mileage = mileage;
-            Owners = owners;
-            InsuranceClaims = insuranceClaims;
-            KnownIssues = knownIssues ?? new List<string>();
-            CarAge = carAge;
-            Recommendation = Recommendation.RiskyPurchase;
+            try
+            {
+                RegNumber = regNumber;
+                Brand = brand;
+                Model = model;
+                Year = year;
+                Mileage = mileage;
+                Owners = owners;
+                InsuranceClaims = insuranceClaims;
+                KnownIssues = knownIssues ?? new List<string>();
+                CarAge = carAge;
+                Recommendation = Recommendation.RiskyPurchase;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Car constructor error for {regNumber}: {ex.Message}");
+                // Säker fallback
+                RegNumber = regNumber ?? "UNKNOWN";
+                Brand = brand ?? "UNKNOWN";
+                Model = model ?? "UNKNOWN";
+                Year = year;
+                Mileage = mileage;
+                Owners = owners;
+                InsuranceClaims = insuranceClaims;
+                KnownIssues = new List<string>();
+                CarAge = carAge;
+                Recommendation = Recommendation.RiskyPurchase;
+            }
         }
+
 
         public void Evaluate()
         {
