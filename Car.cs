@@ -35,20 +35,28 @@ namespace AutoCompare
 
         // Konstruktor
         public Car(string regNumber, string brand, string model, int year, int mileage,
-                   int owners, int insuranceClaims, List<string> knownIssues, DateTime carAge) 
+             int owners, int insuranceClaims, List<string> knownIssues, DateTime carAge)
         {
-            RegNumber = regNumber;
-            Brand = brand;
-            Model = model;
-            Year = year;
-            Mileage = mileage;
-            Owners = owners;
-            InsuranceClaims = insuranceClaims;
-            KnownIssues = knownIssues ?? new List<string>();
-            CarAge = DateTime.Now;
-            Recommendation = Recommendation.RiskyPurchase; 
-            CarAge = carAge;
+            try
+            {
+                RegNumber = regNumber ?? throw new ArgumentNullException(nameof(regNumber));
+                Brand = brand ?? throw new ArgumentNullException(nameof(brand));
+                Model = model ?? throw new ArgumentNullException(nameof(model));
+                Year = year;
+                Mileage = mileage;
+                Owners = owners;
+                InsuranceClaims = insuranceClaims;
+                KnownIssues = knownIssues ?? new List<string>();
+                CarAge = carAge;
+                Recommendation = Recommendation.RiskyPurchase;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("system", "Car.Constructor", ex.ToString());
+                throw; // skickar vidare exception efter loggning
+            }
         }
+
 
 
         // Metod för utvärdering av bil
