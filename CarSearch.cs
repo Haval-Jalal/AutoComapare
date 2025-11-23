@@ -14,48 +14,60 @@ namespace AutoCompare
         //Metoder för att söka bil baserat på registreringsnummer
         public void SearchByRegNumber(string regNumber)
         {
-            bool continueRunning = true;
-            while (continueRunning)
+            try
             {
-                Console.Clear();
-                regNumber = AnsiConsole.Ask<string>("Enter the [green]registration number[/] of the car to evaluate:");
-                Car car = GetDummyData(regNumber);
-                EvaluateCar(car);
-
-                // Display car information in a table format from Spectre.Console 
-                var table = new Table()
-                    .Title("[bold underline cyan]Car Information[/]");
-                table.AddColumn("Property");
-                table.AddColumn("Value");
-                table.AddRow("Registration", car.RegNumber);
-                table.AddRow("Make", car.Brand);
-                table.AddRow("Model", car.Model);
-                table.AddRow("Year", car.Year.ToString());
-                table.AddRow("Mileage", $"{car.Mileage} km");
-                table.AddRow("Owners", car.Owners.ToString());
-                table.AddRow("Insurance Claims", car.InsuranceClaims.ToString());
-                table.AddRow("Known Issues", string.Join(", ", car.KnownIssues));
-
-                //Display recommendation with color coding 
-                string recommendationText = car.Recommendation switch
+                bool continueRunning = true;
+                while (continueRunning)
                 {
-                    Recommendation.RiskyPurchase => "[red]Risky Purchase[/]",
-                    Recommendation.Acceptable => "[yellow]Acceptable[/]",
-                    Recommendation.GoodInvestment => "[green]Good Investment[/]",
-                    _ => "[grey]Unknown[/]"
-                };
-                table.AddRow("Recommendation", recommendationText);
-                table.AddRow("Car Age", $"{DateTime.Now.Year - car.Year} years");
-                AnsiConsole.Write(table);
+                    Console.Clear();
 
-                // Ask user if they want to evaluate another car
-                continueRunning = AnsiConsole.Confirm("\nDo you want to evaluate another car?");
+                    // Användarinput via Spectre.Console
+                    regNumber = AnsiConsole.Ask<string>("Enter the [green]registration number[/] of the car to evaluate:");
 
-                ////Save car search to a json file
-                //var carSearchStore = new DataStore<CarSearch>();
-                //carSearchStore.SaveToJson("carSearches.json");
+                    // Hämta bildata
+                    Car car = GetDummyData(regNumber) ?? throw new NullReferenceException("Car data could not be generated.");
+
+                    // Utvärdera bilen
+                    EvaluateCar(car);
+
+                    // Visa bilinfo i tabell
+                    var table = new Table()
+                        .Title("[bold underline cyan]Car Information[/]");
+                    table.AddColumn("Property");
+                    table.AddColumn("Value");
+                    table.AddRow("Registration", car.RegNumber);
+                    table.AddRow("Make", car.Brand);
+                    table.AddRow("Model", car.Model);
+                    table.AddRow("Year", car.Year.ToString());
+                    table.AddRow("Mileage", $"{car.Mileage} km");
+                    table.AddRow("Owners", car.Owners.ToString());
+                    table.AddRow("Insurance Claims", car.InsuranceClaims.ToString());
+                    table.AddRow("Known Issues", string.Join(", ", car.KnownIssues));
+
+                    string recommendationText = car.Recommendation switch
+                    {
+                        Recommendation.RiskyPurchase => "[red]Risky Purchase[/]",
+                        Recommendation.Acceptable => "[yellow]Acceptable[/]",
+                        Recommendation.GoodInvestment => "[green]Good Investment[/]",
+                        _ => "[grey]Unknown[/]"
+                    };
+                    table.AddRow("Recommendation", recommendationText);
+                    table.AddRow("Car Age", $"{DateTime.Now.Year - car.Year} years");
+                    AnsiConsole.Write(table);
+
+                    // Fråga användaren om de vill fortsätta
+                    continueRunning = AnsiConsole.Confirm("\nDo you want to evaluate another car?");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Logga och informera användaren
+                Logger.Log("system", "CarSearch.SearchByRegNumber", ex.ToString());
+                Console.WriteLine("An error occurred while searching for the car.");
             }
         }
+
+
         //Metod för att hämta dummydata för en bil
         public Car GetDummyData(string regNumber)
         {
