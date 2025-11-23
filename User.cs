@@ -82,11 +82,20 @@ namespace AutoCompare
         // REGISTER
         public bool Register(string username, string plainPassword, TwoFactorMethod method, string contact, DataStore<User> userStore)
         {
-            userStore.LoadFromJson("users.json");
-            if (userStore.List.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
+            //Nya
+            try
             {
-                Console.WriteLine("Username already taken, try again!");
-                return false;
+                userStore.LoadFromJson("users.json"); // fil kan saknas 
+                if (userStore.List.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
+                {
+                    Console.WriteLine("Username already taken, try again!");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("system", $"User.Register", ex.ToString());
+                return false; // metoden misslyckades pga exception
             }
 
             if (!PasswordValidator.IsStrong(plainPassword))
@@ -94,6 +103,7 @@ namespace AutoCompare
                 Console.WriteLine("Password is not strong enough, try again!");
                 return false;
             }
+
 
             Username = username.Trim();
             PasswordHash = Sha256(plainPassword);
@@ -160,6 +170,8 @@ namespace AutoCompare
             return true;
         }
 
+
+
         // FORGOT PASSWORD
         public void ForgotPassword()
         {
@@ -187,14 +199,28 @@ namespace AutoCompare
 
         public void DeleteAccount(DataStore<User> userStore)
         {
-            userStore.LoadFromJson("users.json");
+            try
+            {
+                // Försök läsa användardata från fil
+                userStore.LoadFromJson("users.json");
 
-            bool removed = userStore.RemoveItem(this);
-            if (removed)
-                Console.WriteLine($"{Username} account deleted.");
-            else 
-                Console.WriteLine("Error deleting account.");
+                // Försök ta bort den här användaren
+                bool removed = userStore.RemoveItem(this);
+
+                if (removed)
+                    Console.WriteLine($"{Username} account deleted.");
+                else
+                    Console.WriteLine("Error deleting account.");
+            }
+            catch (Exception ex)
+            {
+                // Logga felet med Logger
+                Logger.Log("system", $"User.DeleteAccount", ex.ToString());
+                Console.WriteLine("An error occurred while deleting the account.");
+            }
         }
+
+
 
         public void GetHistory()
         {
