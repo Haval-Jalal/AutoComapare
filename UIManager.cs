@@ -388,108 +388,123 @@ namespace AutoCompare
         // AskAiChatLoop: ChatGPT-style multi-turn AI chat for cars with minimal emojis and clean output
         private async Task AskAiChatLoop()
         {
-            AnsiConsole.MarkupLine("[cyan]🚗 AI Car Chat — ask about car models (type 'exit' to go back)[/]");
-            var helper = new AiHelper(); // AiHelper reads OPENAI_API_KEY from env
-
-            const string systemInstruction = 
-                "You are an expert automotive assistant. Answer clearly and factually. " +
-                "Use minimal headings, but emojis are allowed to mark pros, cons, and tips. " +
-                "✅ = positive / advantage, ⚠️ = caution / drawback, 🛠️ = maintenance / tip. " +
-                "When user asks follow-up questions, remember prior conversation context.";
-
-            var convo = new List<(string role, string content)> { ("system", systemInstruction) };
-            const int maxTurnsToKeep = 12;
-
-            while (true)
+            try
             {
-                string userInput = AnsiConsole.Ask<string>("You:").Trim();
-                if (string.IsNullOrWhiteSpace(userInput)) continue;
-                if (userInput.Equals("exit", StringComparison.OrdinalIgnoreCase)) break;
+                AnsiConsole.MarkupLine("[cyan]🚗 AI Car Chat — ask about car models (type 'exit' to go back)[/]");
+                var helper = new AiHelper(); // AiHelper reads OPENAI_API_KEY from env
 
-                convo.Add(("user", userInput));
+                const string systemInstruction =
+                    "You are an expert automotive assistant. Answer clearly and factually. " +
+                    "Use minimal headings, but emojis are allowed to mark pros, cons, and tips. " +
+                    "✅ = positive / advantage, ⚠️ = caution / drawback, 🛠️ = maintenance / tip. " +
+                    "When user asks follow-up questions, remember prior conversation context.";
 
-                // Keep recent context + system message
-                if (convo.Count > maxTurnsToKeep)
+                var convo = new List<(string role, string content)> { ("system", systemInstruction) };
+                const int maxTurnsToKeep = 12;
+
+                while (true)
                 {
-                    var sys = convo.First(t => t.role == "system");
-                    var tail = convo.Where(t => t.role != "system").Skip(Math.Max(0, convo.Count - maxTurnsToKeep)).ToList();
-                    convo = new List<(string role, string content)> { sys };
-                    convo.AddRange(tail);
-                }
+                    string userInput = AnsiConsole.Ask<string>("You:").Trim();
+                    if (string.IsNullOrWhiteSpace(userInput)) continue;
+                    if (userInput.Equals("exit", StringComparison.OrdinalIgnoreCase)) break;
 
-                string assistantReply = string.Empty;
+                    convo.Add(("user", userInput));
+
+                    // Keep recent context + system message
+                    if (convo.Count > maxTurnsToKeep)
+                    {
+                        var sys = convo.First(t => t.role == "system");
+                        var tail = convo.Where(t => t.role != "system").Skip(Math.Max(0, convo.Count - maxTurnsToKeep)).ToList();
+                        convo = new List<(string role, string content)> { sys };
+                        convo.AddRange(tail);
+                    }
+
+                    string assistantReply = string.Empty;
+
+                    try
+                    {
+                        assistantReply = await helper.ChatMessagesAsync(convo, model: "gpt-4o-mini", maxTokens: 1200, temperature: 0.0);
+                    }
+                    catch (Exception ex)
+                    {
+                        AnsiConsole.MarkupLine($"[red]AI error:[/] {EscapeMarkup(ex.Message)}");
+                        convo.RemoveAt(convo.Count - 1); // remove user message so not resent
+
+                        // NEW: log AI failure
+                        _logger.Log("system", "AskAiChatLoop.AI", ex.ToString());
+
+                        continue;
+                    }
+
+                    convo.Add(("assistant", assistantReply));
+
+                    // Display assistant reply nicely
+                    AnsiConsole.WriteLine();
+                    AnsiConsole.MarkupLine("[green]🤖 AI:[/]");
+                    foreach (var line in assistantReply.Split('\n'))
+                    {
+                        string trimmed = line.Trim();
+
+                        if (trimmed.StartsWith("Pros:", StringComparison.OrdinalIgnoreCase) ||
+                            trimmed.StartsWith("✅"))
+                        {
+                            AnsiConsole.MarkupLine($"[green]{EscapeMarkup(trimmed)}[/]");
+                        }
+                        else if (trimmed.StartsWith("Cons:", StringComparison.OrdinalIgnoreCase) ||
+                                trimmed.StartsWith("⚠️"))
+                        {
+                            AnsiConsole.MarkupLine($"[yellow]{EscapeMarkup(trimmed)}[/]");
+                        }
+                        else if (trimmed.StartsWith("Tip:", StringComparison.OrdinalIgnoreCase) ||
+                                trimmed.StartsWith("🛠️"))
+                        {
+                            AnsiConsole.MarkupLine($"[cyan]{EscapeMarkup(trimmed)}[/]");
+                        }
+                        else
+                        {
+                            AnsiConsole.WriteLine(EscapeMarkup(trimmed));
+                        }
+                    }
+                    AnsiConsole.WriteLine();
+
+                    var next = AnsiConsole.Prompt(
+                        new SelectionPrompt<string>()
+                            .Title("Choose next action:")
+                            .AddChoices(new[] { "Ask follow-up", "Finish chat" })
+                    );
+
+                    if (next == "Finish chat") break;
+                }
 
                 try
                 {
-                    assistantReply = await helper.ChatMessagesAsync(convo, model: "gpt-4o-mini", maxTokens: 1200, temperature: 0.0);
-                }
-                catch (Exception ex)
-                {
-                    AnsiConsole.MarkupLine($"[red]AI error:[/] {EscapeMarkup(ex.Message)}");
-                    convo.RemoveAt(convo.Count - 1); // remove user message so not resent
-                    continue;
-                }
-
-                convo.Add(("assistant", assistantReply));
-
-                // Display assistant reply nicely
-                AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[green]🤖 AI:[/]");
-                foreach (var line in assistantReply.Split('\n'))
-                {
-                    string trimmed = line.Trim();
-
-                    if (trimmed.StartsWith("Pros:", StringComparison.OrdinalIgnoreCase) ||
-                        trimmed.StartsWith("✅"))
+                    var user = _userStore.List.FirstOrDefault(u => u.Username == _loggedInUser);
+                    if (user != null)
                     {
-                        AnsiConsole.MarkupLine($"[green]{EscapeMarkup(trimmed)}[/]");
-                    }
-                    else if (trimmed.StartsWith("Cons:", StringComparison.OrdinalIgnoreCase) ||
-                            trimmed.StartsWith("⚠️"))
-                    {
-                        AnsiConsole.MarkupLine($"[yellow]{EscapeMarkup(trimmed)}[/]");
-                    }
-                    else if (trimmed.StartsWith("Tip:", StringComparison.OrdinalIgnoreCase) ||
-                            trimmed.StartsWith("🛠️"))
-                    {
-                        AnsiConsole.MarkupLine($"[cyan]{EscapeMarkup(trimmed)}[/]");
-                    }
-                    else
-                    {
-                        AnsiConsole.WriteLine(EscapeMarkup(trimmed));
+                        var lastAssistant = convo.LastOrDefault(t => t.role == "assistant").content ?? string.Empty;
+                        var summary = lastAssistant.Length > 200 ? lastAssistant.Substring(0, 197) + "..." : lastAssistant;
+                        string entry = $"{DateTime.UtcNow:yyyy-MM-dd HH:mm} | 🤖 {EscapeMarkup(summary)}";
+                        user.SearchHistory ??= new List<string>();
+                        user.SearchHistory.Add(entry);
+                        _userStore.SaveToJson();
                     }
                 }
-                AnsiConsole.WriteLine();
-
-                // Follow-up or finish
-                var next = AnsiConsole.Prompt(
-                    new SelectionPrompt<string>()
-                        .Title("Choose next action:")
-                        .AddChoices(new[] { "Ask follow-up", "Finish chat" })
-                );
-
-                if (next == "Finish chat") break;
-            }
-
-            // Save a short summary to user's search history
-            try
-            {
-                var user = _userStore.List.FirstOrDefault(u => u.Username == _loggedInUser);
-                if (user != null)
+                catch
                 {
-                    var lastAssistant = convo.LastOrDefault(t => t.role == "assistant").content ?? string.Empty;
-                    var summary = lastAssistant.Length > 200 ? lastAssistant.Substring(0, 197) + "..." : lastAssistant;
-                    string entry = $"{DateTime.UtcNow:yyyy-MM-dd HH:mm} | 🤖 {EscapeMarkup(summary)}";
-                    user.SearchHistory ??= new List<string>();
-                    user.SearchHistory.Add(entry);
-                    _userStore.SaveToJson();
+                    // don't block user if save fails
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // don't block user if save fails
+                // NEW: full fallback logger
+                _logger.Log("system", "AskAiChatLoop", ex.ToString());
+
+                AnsiConsole.MarkupLine($"[red]Critical error in AI chat:[/] {EscapeMarkup(ex.Message)}");
             }
         }
+
+
+
 
         // Escape text safely for Spectre.Console
         private string EscapeMarkup(string text)

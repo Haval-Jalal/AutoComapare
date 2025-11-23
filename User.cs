@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
@@ -37,30 +37,41 @@ namespace AutoCompare
         // STARRED: keep the ReadHiddenPassword static helper if you use it
         public static string ReadHiddenPassword()
         {
-            StringBuilder input = new StringBuilder();
-            while (true)
+            try
             {
-                var keyInfo = Console.ReadKey(true);
-                if (keyInfo.Key == ConsoleKey.Enter)
+                StringBuilder input = new StringBuilder();
+                while (true)
                 {
-                    Console.WriteLine();
-                    break;
-                }
-                else if (keyInfo.Key == ConsoleKey.Backspace)
-                {
-                    if (input.Length > 0)
+                    var keyInfo = Console.ReadKey(true); // ← kan kasta IOException
+
+                    if (keyInfo.Key == ConsoleKey.Enter)
                     {
-                        input.Remove(input.Length - 1, 1);
-                        Console.Write("\b \b");
+                        Console.WriteLine();
+                        break;
+                    }
+                    else if (keyInfo.Key == ConsoleKey.Backspace)
+                    {
+                        if (input.Length > 0)
+                        {
+                            input.Remove(input.Length - 1, 1);
+                            Console.Write("\b \b");
+                        }
+                    }
+                    else
+                    {
+                        input.Append(keyInfo.KeyChar);
+                        Console.Write("*");
                     }
                 }
-                else
-                {
-                    input.Append(keyInfo.KeyChar);
-                    Console.Write("*");
-                }
+                return input.ToString();
             }
-            return input.ToString();
+            
+            catch (Exception ex)
+            {
+                Logger.Log("system", "User.ReadHiddenPassword", ex.ToString());
+                Console.WriteLine("An error occurred while reading password input.");
+                return string.Empty;
+            }
         }
 
         // CHANGED: Register no longer calls LoadFromJson. It simply sets properties.
@@ -100,8 +111,17 @@ namespace AutoCompare
         // CHANGED: DeleteAccount does not load json or create new datastore. Caller must pass store.
         public bool DeleteAccount(DataStore<User> userStore)
         {
-            bool removed = userStore.RemoveItem(this); // RemoveItem will handle saving
-            return removed;
+            try
+            {
+                bool removed = userStore.RemoveItem(this); // ← filoperation → hög risk
+                return removed;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(Username, "User.DeleteAccount", ex.ToString());
+                Console.WriteLine("An error occurred while deleting the account.");
+                return false;
+            }
         }
 
         // FORGOT PASSWORD
@@ -123,10 +143,20 @@ namespace AutoCompare
 
         private static string Sha256(string input)
         {
-            using var sha = SHA256.Create();
-            var bytes = Encoding.UTF8.GetBytes(input);
-            var hash = sha.ComputeHash(bytes);
-            return Convert.ToHexString(hash).ToLowerInvariant();
+            try
+            {
+                using var sha = SHA256.Create(); // ← kan kasta CryptographicException
+                var bytes = Encoding.UTF8.GetBytes(input);
+                var hash = sha.ComputeHash(bytes);
+                return Convert.ToHexString(hash).ToLowerInvariant();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("system", "User.Sha256", ex.ToString());
+                Console.WriteLine("An error occurred while hashing data.");
+                return string.Empty; // Bästa fallback när hashning misslyckas
+            }
         }
+
     }
 }
