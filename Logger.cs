@@ -21,7 +21,7 @@ namespace AutoCompare
             _logs = LoadLogs();
         }
 
-        // Lägg till ny loggpost
+        // Logger.Log() → sparar felet till JSON
         public void Log(string user, string context, string message)
         {
             var entry = new Dictionary<string, string>

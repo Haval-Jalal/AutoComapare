@@ -135,6 +135,8 @@ namespace AutoCompare
         // ===============================
         // VIEW LOG CONTENT
         // ===============================
+
+        //Admin.ShowLogEntries() → visar loggar för admin
         public void ShowLogEntries(string filename)
         {
             try
