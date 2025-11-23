@@ -18,13 +18,24 @@ namespace AutoCompare
 
         public AiHelper()
         {
-            _apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
-                ?? throw new InvalidOperationException("OPENAI_API_KEY is missing. Add it to .env or environment variables.");
+        try
+        {
+             _apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+             ?? throw new InvalidOperationException("OPENAI_API_KEY is missing. Add it to .env or environment variables.");
 
             _http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
             _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
             _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
+
+        catch (Exception ex)
+        
+        {
+            Logger.Log($"AiHelper constructor error: {ex.Message}");
+            throw; // kastar vidare samma exception utan att ändra beteendet
+        }
+    }
+
 
         // Send a chat request using role-labelled messages.
         // messages: list of (role, content) pairs. role should be "system", "user", or "assistant".
@@ -37,8 +48,10 @@ namespace AutoCompare
         {
             if (messages == null) throw new ArgumentNullException(nameof(messages));
 
-            // Build messages array for JSON payload
-            var payloadMessages = new List<object>();
+            try
+            {
+                // Build messages array for JSON payload
+                var payloadMessages = new List<object>();
             foreach (var m in messages)
             {
                 if (string.IsNullOrWhiteSpace(m.role) || string.IsNullOrWhiteSpace(m.content)) continue;
@@ -88,11 +101,19 @@ namespace AutoCompare
             }
             catch (Exception ex)
             {
+                Logger.Log($"ChatMessagesAsync JSON parse error: {ex.Message}");
                 throw new Exception("Failed to parse OpenAI response JSON.", ex);
             }
         }
+            
+            catch (Exception ex)
+            {
+                Logger.Log($"ChatMessagesAsync error: {ex.Message}");
+                throw; // kasta vidare felet som innan
+            }
+        }
 
-        public void Dispose()
+public void Dispose()
         {
             if (!_disposed)
             {
