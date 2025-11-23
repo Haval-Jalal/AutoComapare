@@ -99,36 +99,47 @@ namespace AutoCompare
         //Metod för att utvärdera en bil
         public void EvaluateCar(Car car)
         {
-            int carAge = DateTime.Now.Year - car.Year;
-            string message;
-            Spectre.Console.Color panelColor; // Explicitly use Spectre.Console.Color
-
-            if (car.Mileage > 200000 && carAge > 12)
+            try
             {
-                car.Recommendation = Recommendation.RiskyPurchase;
-                message = "[red]Risky Purchase:[/] High mileage, several known issues, many previous owners, and an older vehicle age.";
-                panelColor = Spectre.Console.Color.Red;
-            }
-            else if (car.Mileage < 100000 && carAge < 5)
-            {
-                car.Recommendation = Recommendation.GoodInvestment;
-                message = "[green]Good Investment:[/] Low mileage, minimal issues, few previous owners, and a relatively new model.";
-                panelColor = Spectre.Console.Color.Green;
-            }
-            else
-            {
-                car.Recommendation = Recommendation.Acceptable;
-                message = "[yellow]Acceptable:[/] Moderate mileage, some known issues, average ownership history, or mid-range vehicle age.";
-                panelColor = Spectre.Console.Color.Yellow;
-            }
+                if (car == null) throw new ArgumentNullException(nameof(car));
 
-            var panel = new Panel(message)
-                .Header("Car Evaluation", Justify.Center)
-                .Border(BoxBorder.Rounded)
-                .BorderStyle(new Style(panelColor))
-                .Padding(1, 1, 1, 1);
+                int carAge = DateTime.Now.Year - car.Year;
+                string message;
+                Spectre.Console.Color panelColor;
 
-            AnsiConsole.Write(panel);
+                if (car.Mileage > 200000 && carAge > 12)
+                {
+                    car.Recommendation = Recommendation.RiskyPurchase;
+                    message = "[red]Risky Purchase:[/] High mileage, several known issues, many previous owners, and an older vehicle age.";
+                    panelColor = Spectre.Console.Color.Red;
+                }
+                else if (car.Mileage < 100000 && carAge < 5)
+                {
+                    car.Recommendation = Recommendation.GoodInvestment;
+                    message = "[green]Good Investment:[/] Low mileage, minimal issues, few previous owners, and a relatively new model.";
+                    panelColor = Spectre.Console.Color.Green;
+                }
+                else
+                {
+                    car.Recommendation = Recommendation.Acceptable;
+                    message = "[yellow]Acceptable:[/] Moderate mileage, some known issues, average ownership history, or mid-range vehicle age.";
+                    panelColor = Spectre.Console.Color.Yellow;
+                }
+
+                var panel = new Panel(message)
+                    .Header("Car Evaluation", Justify.Center)
+                    .Border(BoxBorder.Rounded)
+                    .BorderStyle(new Style(panelColor))
+                    .Padding(1, 1, 1, 1);
+
+                AnsiConsole.Write(panel);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("system", "CarSearch.EvaluateCar", ex.ToString());
+                Console.WriteLine("An error occurred while evaluating the car.");
+            }
         }
+
     }
 }

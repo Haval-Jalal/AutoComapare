@@ -12,84 +12,129 @@ namespace AutoCompare
 
         public void Start()
         {
-            _userStore.LoadFromJson("users.json");
+            try
+            {
+                _userStore.LoadFromJson("users.json");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("system", "UIManager.Start.LoadFromJson", ex.ToString());
+                AnsiConsole.MarkupLine("[red]Failed to load users.json. Continuing with empty user list.[/]");
+            }
 
             while (true)
             {
-                AnsiConsole.Clear();
-                var title = new FigletText("AutoCompare")
-                    .Color(Color.Green)
-                    .Centered();
-                AnsiConsole.Write(title);
-                AnsiConsole.WriteLine();
-
-                var menu = new SelectionPrompt<string>()
-                    .Title("[yellow]Select an option:[/]")
-                    .AddChoices(_loggedInUser == null
-                        ? new[] { "📝 Register", "🔐 Login", "❌ Exit" }
-                        : new[] { "📜 Profile", "🚪 Logout", "❌ Exit" });
-
-                var choice = AnsiConsole.Prompt(menu);
-
-                switch (choice)
+                try
                 {
-                    case "📝 Register":
-                        Register();
-                        break;
-                    case "🔐 Login":
-                        Login();
-                        break;
-                    case "📜 Profile":
-                        ShowProfile();
-                        break;
-                    case "🚪 Logout":
-                        Logout();
-                        break;
-                    case "❌ Exit":
-                        _userStore.SaveToJson("users.json");
-                        return;
+                    AnsiConsole.Clear();
+                    var title = new FigletText("AutoCompare")
+                        .Color(Color.Green)
+                        .Centered();
+                    AnsiConsole.Write(title);
+                    AnsiConsole.WriteLine();
+
+                    var menu = new SelectionPrompt<string>()
+                        .Title("[yellow]Select an option:[/]")
+                        .AddChoices(_loggedInUser == null
+                            ? new[] { "📝 Register", "🔐 Login", "❌ Exit" }
+                            : new[] { "📜 Profile", "🚪 Logout", "❌ Exit" });
+
+                    var choice = AnsiConsole.Prompt(menu);
+
+                    switch (choice)
+                    {
+                        case "📝 Register":
+                            Register();
+                            break;
+                        case "🔐 Login":
+                            Login();
+                            break;
+                        case "📜 Profile":
+                            ShowProfile();
+                            break;
+                        case "🚪 Logout":
+                            Logout();
+                            break;
+                        case "❌ Exit":
+                            try
+                            {
+                                _userStore.SaveToJson("users.json");
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.Log("system", "UIManager.Start.SaveToJson", ex.ToString());
+                                AnsiConsole.MarkupLine("[red]Could not save user data![/]");
+                            }
+                            return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log("system", "UIManager.Start.MainLoop", ex.ToString());
+                    AnsiConsole.MarkupLine("[red]Unexpected error in main menu.[/]");
                 }
             }
         }
 
+
         private void Register()
         {
-            AnsiConsole.MarkupLine("[yellow]Registration[/]");
-            var username = AnsiConsole.Ask<string>("Enter username:").Trim();
-
-            if (_userStore.List.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
+            try
             {
-                AnsiConsole.MarkupLine("[red]Username already taken.[/]");
+                AnsiConsole.MarkupLine("[yellow]Registration[/]");
+                var username = AnsiConsole.Ask<string>("Enter username:").Trim();
+
+                if (_userStore.List.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
+                {
+                    AnsiConsole.MarkupLine("[red]Username already taken.[/]");
+                    Pause();
+                    return;
+                }
+
+                var password = ReadHiddenPassword("Enter password:");
+                var method = AnsiConsole.Prompt(
+                    new SelectionPrompt<TwoFactorMethod>()
+                        .Title("Choose 2FA method:")
+                        .AddChoices(TwoFactorMethod.none, TwoFactorMethod.Email, TwoFactorMethod.SMS));
+
+                string? contact = null;
+                if (method == TwoFactorMethod.Email)
+                    contact = AnsiConsole.Ask<string>("Enter email:");
+                else if (method == TwoFactorMethod.SMS)
+                    contact = AnsiConsole.Ask<string>("Enter phone number (with country code):");
+
+                var tempUser = new User();
+
+                if (!tempUser.Register(username, password, method, contact, _userStore))
+                {
+                    AnsiConsole.MarkupLine("[red]Registration failed.[/]");
+                    Pause();
+                    return;
+                }
+
+                _userStore.AddItem(tempUser);
+
+                try
+                {
+                    _userStore.SaveToJson("users.json");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log("system", "UIManager.Register.SaveToJson", ex.ToString());
+                    AnsiConsole.MarkupLine("[red]Could not save user data.[/]");
+                }
+
+                AnsiConsole.MarkupLine($"[green]Account {username} registered![/]");
                 Pause();
-                return;
             }
-
-            var password = ReadHiddenPassword("Enter password:");
-
-            var method = AnsiConsole.Prompt(
-                new SelectionPrompt<TwoFactorMethod>()
-                    .Title("Choose 2FA method:")
-                    .AddChoices(TwoFactorMethod.none, TwoFactorMethod.Email, TwoFactorMethod.SMS));
-
-            string? contact = null;
-            if (method == TwoFactorMethod.Email)
-                contact = AnsiConsole.Ask<string>("Enter email:");
-            else if (method == TwoFactorMethod.SMS)
-                contact = AnsiConsole.Ask<string>("Enter phone number (with country code):");
-
-            var tempUser = new User();
-            if (!tempUser.Register(username, password, method, contact, _userStore))
+            catch (Exception ex)
             {
-                AnsiConsole.MarkupLine("[red]Registration failed.[/]");
+                Logger.Log("system", "UIManager.Register", ex.ToString());
+                AnsiConsole.MarkupLine("[red]Unexpected error during registration.[/]");
                 Pause();
-                return;
             }
-
-            _userStore.AddItem(tempUser);
-            _userStore.SaveToJson("users.json");
-            AnsiConsole.MarkupLine($"[green]Account {username} registered![/]");
-            Pause();
         }
+
 
         private void Login()
         {

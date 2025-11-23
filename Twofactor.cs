@@ -7,6 +7,7 @@ using Spectre.Console;
 using Twilio;
 using Twilio.Rest.Verify.V2.Service;
 using DotNetEnv;
+using AutoCompare;//ny
 
 public enum TwoFactorMethod
 {
@@ -79,7 +80,7 @@ public class TwoFactor
             var message = new MailMessage(fromEmail, email)
             {
                 Subject = "AutoCompare Two-Factor Verification",
-                Body = $"Hello!\n\nYour verification code is: {code}\n\nStay safe.\n– AutoCompare"
+                Body = $"Hello!\n\nYour verification code är: {code}\n\nStay safe.\n– AutoCompare"
             };
 
             smtp.Send(message);
@@ -108,12 +109,16 @@ public class TwoFactor
         }
         catch (Exception ex)
         {
+            // Logga felet
+            Logger.Log($"EmailVerification error for {email}: {ex.ToString()}");
+
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"2FA: Error sending email: {ex.Message}");
             Console.ResetColor();
             return false;
         }
     }
+
 
     private static bool SMSVerification(string phoneNumber)
     {
