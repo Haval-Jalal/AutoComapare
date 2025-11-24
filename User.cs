@@ -1,3 +1,4 @@
+﻿using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -125,9 +126,84 @@ namespace AutoCompare
         }
 
         // FORGOT PASSWORD
-        public void ForgotPassword()
+        public void ForgotPassword(DataStore<User> userStore)
         {
-            Console.WriteLine("A reset code should be sent via your selected 2FA method.");
+            Console.Clear();
+            AnsiConsole.Write(new FigletText("Forgot Password").Centered().Color(Color.Yellow));
+            AnsiConsole.Write(new Rule("[yellow]Password Reset[/]").RuleStyle("grey").Centered());
+            AnsiConsole.WriteLine();
+
+            string username = AnsiConsole.Ask<string>("Enter your [green]email[/]:").Trim();
+            var user = userStore.List.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+
+            if (user == null)
+            {
+                AnsiConsole.MarkupLine($"\n[red]✗ No account found:[/] [bold]{username}[/]");
+                var action = AnsiConsole.Prompt(new SelectionPrompt<string>()
+                    .Title("Would you like to register?")
+                    .AddChoices(new[] { "Try again", "Register", "Cancel" }));
+
+                if (action == "Register") Register(string.Empty, string.Empty, TwoFactorMethod.none, null);
+                else if (action == "Try again") ForgotPassword(userStore);
+                return;
+            }
+
+            AnsiConsole.MarkupLine($"[green]✓ Account found:[/] [bold]{username}[/]");
+            AnsiConsole.MarkupLine("[yellow]Verify your identity with 2FA.[/]\n");
+
+            while (true)
+            {
+                bool hasEmail = !string.IsNullOrWhiteSpace(user.Email), hasPhone = !string.IsNullOrWhiteSpace(user.PhoneNumber);
+                var choices = new List<string>();
+                if (hasEmail) choices.Add("📧 Email");
+                if (hasPhone) choices.Add("📱 SMS");
+                if (!hasEmail) choices.Add("📧 Add Email");
+                if (!hasPhone) choices.Add("📱 Add Phone");
+                choices.Add("❌ Cancel");
+
+                var choice = AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Choose [yellow]2FA method[/]:").AddChoices(choices));
+                if (choice == "❌ Cancel") return;
+
+                if (choice.Contains("Add"))
+                {
+                    bool isEmail = choice.Contains("Email");
+                    string val = AnsiConsole.Ask<string>($"Enter [blue]{(isEmail ? "email" : "phone")}[/]:").Trim();
+                    if (isEmail) user.Email = val; else user.PhoneNumber = val;
+                    userStore.SaveToJson();
+                    AnsiConsole.MarkupLine("[green]✓ Saved![/]");
+                    continue;
+                }
+
+                bool isEmailMethod = choice == "📧 Email";
+                string contact = isEmailMethod ? user.Email! : user.PhoneNumber!;
+                string label = isEmailMethod ? "email" : "phone";
+
+                AnsiConsole.MarkupLine($"Current {label}: [blue]{contact}[/]");
+                if (AnsiConsole.Prompt(new SelectionPrompt<string>().Title("Is this correct?").AddChoices(new[] { "Yes", "No" })) == "No")
+                {
+                    contact = AnsiConsole.Ask<string>($"Enter new [blue]{label}[/]:").Trim();
+                    if (isEmailMethod) user.Email = contact; else user.PhoneNumber = contact;
+                    userStore.SaveToJson();
+                    AnsiConsole.MarkupLine("[green]✓ Saved![/]");
+                }
+
+                AnsiConsole.MarkupLine($"Sending code to: [blue]{contact}[/]");
+                if (TwoFactor.Verify(isEmailMethod ? TwoFactorMethod.Email : TwoFactorMethod.SMS, user.Email, user.PhoneNumber))
+                {
+                    AnsiConsole.MarkupLine("\n[green]✓ Verified![/]\n");
+                    while (true)
+                    {
+                        var newPass = AnsiConsole.Prompt(new TextPrompt<string>("Enter [green]new password[/]:").Secret());
+                        var confirm = AnsiConsole.Prompt(new TextPrompt<string>("Confirm:").Secret());
+                        if (newPass != confirm) { AnsiConsole.MarkupLine("[red]✗ Mismatch![/]\n"); continue; }
+                        if (user.ResetPassword(newPass)) { userStore.SaveToJson(); AnsiConsole.MarkupLine("[green]✓ Password reset![/]"); Console.ReadKey(true); return; }
+                        AnsiConsole.MarkupLine("[red]✗ Failed. Retry.[/]");
+                    }
+                }
+
+                AnsiConsole.MarkupLine("[red]✗ Verification failed.[/]\n");
+                if (!AnsiConsole.Confirm($"Try {(isEmailMethod ? "SMS" : "Email")} instead?")) return;
+            }
         }
 
         public bool ResetPassword(string newPassword)
