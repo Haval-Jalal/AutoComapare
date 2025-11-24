@@ -5,13 +5,13 @@ using System.Text.Json;
 
 namespace AutoCompare
 {
-    public class Logger
+    public static class Logger
     {
-        private readonly string _filePath;
+        private static readonly string _filePath;
         private static List<Dictionary<string, string>> _logs = new List<Dictionary<string, string>>();
 
         // CHANGED: default path is "logs/logs.json" (folder + file), ensures directory exists
-        public Logger(string filePath = "logs/logs.json")
+        public static Logger(string filePath = "logs.json")
         {
             _filePath = filePath;
             var dir = Path.GetDirectoryName(_filePath);
@@ -33,9 +33,9 @@ namespace AutoCompare
             SaveLogs();
         }
 
-        public List<Dictionary<string, string>> GetLogs() => _logs;
+        public static List<Dictionary<string, string>> GetLogs() => _logs;
 
-        public void DisplayLogs()
+        public static void DisplayLogs()
         {
             Console.WriteLine("\n--- System Log ---");
             foreach (var entry in _logs)
@@ -50,7 +50,7 @@ namespace AutoCompare
             File.WriteAllText(_filePath, json);
         }
 
-        private List<Dictionary<string, string>> LoadLogs()
+        private static List<Dictionary<string, string>> LoadLogs()
         {
             if (!File.Exists(_filePath))
                 return new List<Dictionary<string, string>>();

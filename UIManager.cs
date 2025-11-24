@@ -11,7 +11,7 @@ namespace AutoCompare
         private readonly DataStore<User> _userStore = new DataStore<User>("users.json");
         private readonly DataStore<Car> _carStore = new DataStore<Car>("cars.json");
         private readonly DataStore<CarSearch> _carSearchStore = new DataStore<CarSearch>("carsearchs.json");
-        private readonly Logger _logger = new Logger("logs/logs.json");
+        private readonly Logger _logger = new Logger("logs.json");
         private readonly Admin _admin;
         private string? _loggedInUser;
         private readonly AIService _aiService = new AIService();
