@@ -111,7 +111,13 @@ namespace AutoCompare
                 if (PasswordValidator.IsStrong(password))
                     break;
 
-                AnsiConsole.MarkupLine("[red]❌ Password not strong enough, please try again![/]");
+                AnsiConsole.Write(
+                    new Panel("[red]❌ Weak password! 6+ chars, upper, lower, digit, special[/]")
+                        .Border(BoxBorder.Rounded)
+                        .BorderStyle(Style.Parse("red"))
+                        .Padding(1, 0, 1, 0)
+                        .Header("[yellow]Password Requirements[/]", Justify.Center)
+                );
             }
 
             // Confirm password
@@ -213,60 +219,60 @@ namespace AutoCompare
 
         // CHANGED: Login uses _userStore (shared)
         private void Login()
-{
-    AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]");
-    AnsiConsole.MarkupLine("[bold green]🔐 Login[/]");
-    AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]\n");
+        {
+            AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]");
+            AnsiConsole.MarkupLine("[bold green]🔐 Login[/]");
+            AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]\n");
 
-    var username = AnsiConsole.Ask<string>(
-        "[yellow]Enter email[/] [grey](type 'exit' to go back)[/]:").Trim();
+            var username = AnsiConsole.Ask<string>(
+                "[yellow]Enter email[/] [grey](type 'exit' to go back)[/]:").Trim();
 
-    if (username.Equals("exit", StringComparison.OrdinalIgnoreCase))
-        return;
+            if (username.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                return;
 
-    var password = ReadHiddenPassword("Enter password:").Trim();
+            var password = ReadHiddenPassword("Enter password:").Trim();
 
-    // Admin login check
-    if (_admin.TryLogin(username, password))
-    {
-        AnsiConsole.MarkupLine($"\n[green]🛠️ Logged in as Admin![/]");
-        Pause();
-        AdminPanel();
-        return;
-    }
+            // Admin login check
+            if (_admin.TryLogin(username, password))
+            {
+                AnsiConsole.MarkupLine($"\n[green]🛠️ Logged in as Admin![/]");
+                Pause();
+                AdminPanel();
+                return;
+            }
 
-    var user = _userStore.List.FirstOrDefault(u =>
-        u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            var user = _userStore.List.FirstOrDefault(u =>
+                u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
 
-    if (user == null)
-    {
-        AnsiConsole.MarkupLine("[red]❌ No account found with that email.[/]");
-        Pause();
-        return;
-    }
+            if (user == null)
+            {
+                AnsiConsole.MarkupLine("[red]❌ No account found with that email.[/]");
+                Pause();
+                return;
+            }
 
-    if (!user.CheckPassword(password))
-    {
-        AnsiConsole.MarkupLine("[red]❌ Incorrect password.[/]");
-        Pause();
-        return;
-    }
+            if (!user.CheckPassword(password))
+            {
+                AnsiConsole.MarkupLine("[red]❌ Incorrect password.[/]");
+                Pause();
+                return;
+            }
 
-    // 2FA Verification
-    bool verified = TwoFactor.Verify(user.TwoFactorChoice, user.Email, user.PhoneNumber);
+            // 2FA Verification
+            bool verified = TwoFactor.Verify(user.TwoFactorChoice, user.Email, user.PhoneNumber);
 
-    if (!verified)
-    {
-        AnsiConsole.MarkupLine("[red]❌ Login failed due to invalid 2FA code.[/]");
-        Pause();
-        return;
-    }
+            if (!verified)
+            {
+                AnsiConsole.MarkupLine("[red]❌ Login failed due to invalid 2FA code.[/]");
+                Pause();
+                return;
+            }
 
-    _loggedInUser = user.Username;
+            _loggedInUser = user.Username;
 
-    AnsiConsole.MarkupLine($"\n[green]✅ Welcome back, [bold]{user.Username}[/]![/]");
-    Pause();
-}
+            AnsiConsole.MarkupLine($"\n[green]✅ Welcome back, [bold]{user.Username}[/]![/]");
+            Pause();
+        }
 
         private void Logout()
         {
