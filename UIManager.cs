@@ -56,7 +56,7 @@ namespace AutoCompare
                     "🚗 Search Car",
                     "🤖 Ask AI about a Car Model",
                     "📜 Manage Profile",
-                    "🛠 Admin Panel",
+                     "ℹ️ About us",
                     "🚪 Logout"
                 );
 
@@ -73,9 +73,8 @@ namespace AutoCompare
                 case "📜 Manage Profile":
                     ManageProfile();
                     break;
-                case "🛠 Admin Panel":
-                    if (_admin.TryLoginPrompt())
-                        AdminPanel();
+                case "ℹ️ About us":
+                    ShowAbout();
                     break;
                 case "🚪 Logout":
                     Logout();
@@ -161,6 +160,25 @@ namespace AutoCompare
                 }
             }
         }
+        private void ShowAbout()
+        {
+            AnsiConsole.MarkupLine("[green]AutoCompare[/]");
+            AnsiConsole.MarkupLine("AutoCompare helps you further investigate and find information about cars. You provide a registration number - we provide the information.");
+            AnsiConsole.MarkupLine("Our goal is to ensure our users makes a risk-free purchase by providing detailed information about the cars you're browsing.\n");
+
+            //AnsiConsole.MarkupLine("[yellow]Press any key to go back to the main menu...[/]");
+            //Console.ReadKey(true);
+            // Back-knapp via SelectionPrompt
+            var menu = new SelectionPrompt<string>()
+                .Title("[yellow]Tryck 'Back' för att återgå till huvudmenyn[/]")
+                .AddChoices("🔙 Back");
+
+            AnsiConsole.Prompt(menu);
+
+            // När användaren väljer "Back" returnerar metoden och användaren är tillbaka i ShowUserMenu
+        }
+        
+
 
         // CHANGED: Login uses _userStore (shared)
         private void Login()
