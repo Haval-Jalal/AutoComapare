@@ -63,6 +63,14 @@ namespace AutoCompare
             return input.ToString();
         }
 
+        // Helps validate email format, so user uses a real email address.
+        public static bool IsValidEmail(string email)
+        {
+            return Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+                RegexOptions.IgnoreCase);
+        }
+
+
         // CHANGED: Register no longer calls LoadFromJson. It simply sets properties.
         // The caller (UIManager) should call userStore.AddItem(...) which will Save.
         public bool Register(string username, string plainPassword, TwoFactorMethod method, string contact)
@@ -70,6 +78,18 @@ namespace AutoCompare
             if (!PasswordValidator.IsStrong(plainPassword))
             {
                 Console.WriteLine("Password is not strong enough, try again!");
+                return false;
+            }
+
+            if (!IsValidEmail(username))
+            {
+                Console.WriteLine("Invalid email format!");
+                return false;
+            }
+
+            if (method == TwoFactorMethod.Email && (contact == null || !IsValidEmail(contact)))
+            {
+                Console.WriteLine("Invalid 2FA email format!");
                 return false;
             }
 

@@ -56,7 +56,7 @@ namespace AutoCompare
                     "🚗 Search Car",
                     "🤖 Ask AI about a Car Model",
                     "📜 Manage Profile",
-                     "ℹ️ About us",
+                    "ℹ️ About us",
                     "🚪 Logout"
                 );
 
