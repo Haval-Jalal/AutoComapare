@@ -8,7 +8,7 @@ namespace AutoCompare
     public class Logger
     {
         private readonly string _filePath;
-        private List<Dictionary<string, string>> _logs;
+        private static List<Dictionary<string, string>> _logs = new List<Dictionary<string, string>>();
 
         // CHANGED: default path is "logs/logs.json" (folder + file), ensures directory exists
         public Logger(string filePath = "logs/logs.json")
@@ -21,7 +21,7 @@ namespace AutoCompare
             _logs = LoadLogs();
         }
 
-        public void Log(string username, string action)
+        public static void Log(string username, string action)
         {
             var entry = new Dictionary<string, string>
             {
@@ -44,7 +44,7 @@ namespace AutoCompare
             }
         }
 
-        private void SaveLogs()
+        private static void SaveLogs()
         {
             var json = JsonSerializer.Serialize(_logs, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_filePath, json);

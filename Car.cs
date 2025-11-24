@@ -24,7 +24,9 @@ namespace AutoCompare
         public Recommendation Recommendation { get; set; }
         public DateTime CarAge { get; set; }
 
-        public Car() { } // NEW: parameterless constructor for deserialization
+        public Car() { } // NEW: parameterless constructor for
+                         // 
+         
 
         public Car(string regNumber, string brand, string model, int year, int mileage,
             int owners, int insuranceClaims, List<string> knownIssues, DateTime carAge)
@@ -44,7 +46,7 @@ namespace AutoCompare
             }
             catch (Exception ex)
             {
-                Logger.Log($"Car constructor error for {regNumber}: {ex.Message}");
+                Logger.Log("", $"Car constructor error for {regNumber}: {ex.Message}");
                 // Säker fallback
                 RegNumber = regNumber ?? "UNKNOWN";
                 Brand = brand ?? "UNKNOWN";
