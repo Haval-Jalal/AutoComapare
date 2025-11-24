@@ -6,6 +6,7 @@ namespace AutoCompare
         static async Task Main(string[] args)
         {
             Env.Load();
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
             var uiManager = new UIManager();
             await uiManager.Start();
             

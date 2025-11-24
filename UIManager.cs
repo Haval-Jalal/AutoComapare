@@ -56,7 +56,7 @@ namespace AutoCompare
                     "🚗 Search Car",
                     "🤖 Ask AI about a Car Model",
                     "📜 Manage Profile",
-                     "ℹ️ About us",
+                    "ℹ️ About us",
                     "🚪 Logout"
                 );
 
@@ -85,12 +85,19 @@ namespace AutoCompare
         // CHANGED: Register now uses the shared _userStore and DOES NOT call LoadFromJson
         private void Register()
         {
-            AnsiConsole.MarkupLine("[yellow]Registration[/]");
-            var username = AnsiConsole.Ask<string>("Enter email:").Trim();
+            AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]");
+            AnsiConsole.MarkupLine("[bold green]📝 Registration[/]");
+            AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]\n");
+
+            var username = AnsiConsole.Ask<string>(
+                "[yellow]Enter email[/] [grey](type 'exit' to go back)[/]:").Trim();
+
+            if (username.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                return;
 
             if (_userStore.List.Any(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase)))
             {
-                AnsiConsole.MarkupLine("[red]Email already registered![/]");
+                AnsiConsole.MarkupLine("[red]❌ Email already registered![/]");
                 Pause();
                 return;
             }
@@ -99,26 +106,31 @@ namespace AutoCompare
 
             var method = AnsiConsole.Prompt(
                 new SelectionPrompt<TwoFactorMethod>()
-                    .Title("Choose 2FA method:")
+                    .Title("[yellow]Choose 2FA method:[/]")
                     .AddChoices(TwoFactorMethod.none, TwoFactorMethod.Email, TwoFactorMethod.SMS));
 
             string? contact = null;
+
             if (method == TwoFactorMethod.Email)
-                contact = AnsiConsole.Ask<string>("Enter email:");
+            {
+                contact = AnsiConsole.Ask<string>("[cyan]Enter email for 2FA:[/]");
+            }
             else if (method == TwoFactorMethod.SMS)
-                contact = AnsiConsole.Ask<string>("Enter phone number (with country code):");
+            {
+                contact = AnsiConsole.Ask<string>("[cyan]Enter phone number (with country code):[/]");
+            }
 
             var tempUser = new User();
             if (!tempUser.Register(username, password, method, contact))
             {
-                AnsiConsole.MarkupLine("[red]Registration failed.[/]");
+                AnsiConsole.MarkupLine("[red]❌ Registration failed.[/]");
                 Pause();
                 return;
             }
 
-            // CHANGED: Save by adding to the UIManager-owned _userStore (this will call SaveToJson automatically)
             _userStore.AddItem(tempUser);
-            AnsiConsole.MarkupLine($"[green]Account {username} registered![/]");
+
+            AnsiConsole.MarkupLine($"\n[green]✅ Account [bold]{username}[/] registered successfully![/]");
             Pause();
         }
 
@@ -182,38 +194,60 @@ namespace AutoCompare
 
         // CHANGED: Login uses _userStore (shared)
         private void Login()
-        {
-            AnsiConsole.MarkupLine("[yellow]Login[/]");
-            var username = AnsiConsole.Ask<string>("Enter email:").Trim();
-            var password = ReadHiddenPassword("Enter password:").Trim();
+{
+    AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]");
+    AnsiConsole.MarkupLine("[bold green]🔐 Login[/]");
+    AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]\n");
 
-            // Admin login check
-            if (_admin.TryLogin(username, password))
-            {
-                AdminPanel();
-                return;
-            }
+    var username = AnsiConsole.Ask<string>(
+        "[yellow]Enter email[/] [grey](type 'exit' to go back)[/]:").Trim();
 
-            var user = _userStore.List.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-            if (user == null || !user.CheckPassword(password))
-            {
-                AnsiConsole.MarkupLine("[red]Wrong email or password.[/]");
-                Pause();
-                return;
-            }
+    if (username.Equals("exit", StringComparison.OrdinalIgnoreCase))
+        return;
 
-            bool verified = TwoFactor.Verify(user.TwoFactorChoice, user.Email, user.PhoneNumber);
-            if (!verified)
-            {
-                AnsiConsole.MarkupLine("[red]Login failed due to 2FA.[/]");
-                Pause();
-                return;
-            }
+    var password = ReadHiddenPassword("Enter password:").Trim();
 
-            _loggedInUser = user.Username;
-            AnsiConsole.MarkupLine($"[green]Welcome back, {user.Username}![/]");
-            Pause();
-        }
+    // Admin login check
+    if (_admin.TryLogin(username, password))
+    {
+        AnsiConsole.MarkupLine($"\n[green]🛠️ Logged in as Admin![/]");
+        Pause();
+        AdminPanel();
+        return;
+    }
+
+    var user = _userStore.List.FirstOrDefault(u =>
+        u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+
+    if (user == null)
+    {
+        AnsiConsole.MarkupLine("[red]❌ No account found with that email.[/]");
+        Pause();
+        return;
+    }
+
+    if (!user.CheckPassword(password))
+    {
+        AnsiConsole.MarkupLine("[red]❌ Incorrect password.[/]");
+        Pause();
+        return;
+    }
+
+    // 2FA Verification
+    bool verified = TwoFactor.Verify(user.TwoFactorChoice, user.Email, user.PhoneNumber);
+
+    if (!verified)
+    {
+        AnsiConsole.MarkupLine("[red]❌ Login failed due to invalid 2FA code.[/]");
+        Pause();
+        return;
+    }
+
+    _loggedInUser = user.Username;
+
+    AnsiConsole.MarkupLine($"\n[green]✅ Welcome back, [bold]{user.Username}[/]![/]");
+    Pause();
+}
 
         private void Logout()
         {
