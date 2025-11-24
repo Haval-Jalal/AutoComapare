@@ -102,13 +102,32 @@ namespace AutoCompare
                 return;
             }
 
-            var password = ReadHiddenPassword("Enter password:");
+            // Loop: ask for password until strong enough
+            string password;
+            while (true)
+            {
+                password = ReadHiddenPassword("Enter password:");
+
+                if (PasswordValidator.IsStrong(password))
+                    break;
+
+                AnsiConsole.MarkupLine("[red]❌ Password not strong enough, please try again![/]");
+            }
+
+            // Confirm password
+            var confirmPassword = ReadHiddenPassword("Confirm password:");
+            if (!password.Equals(confirmPassword))
+            {
+                AnsiConsole.MarkupLine("[red]❌ Passwords do not match![/]");
+                Pause();
+                return;
+            }
 
             var method = AnsiConsole.Prompt(
                 new SelectionPrompt<TwoFactorMethod>()
                     .Title("[yellow]Choose 2FA method:[/]")
                     .AddChoices(TwoFactorMethod.none, TwoFactorMethod.Email, TwoFactorMethod.SMS));
-
+            
             string? contact = null;
 
             if (method == TwoFactorMethod.Email)
