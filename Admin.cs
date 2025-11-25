@@ -96,25 +96,23 @@ namespace AutoCompare
         public void ShowLogFiles()
         {
             Console.WriteLine("\n=== LOG FILES ===");
-            if (!Directory.Exists("logs"))
+
+            // Kolla bara efter logs.json i root
+            if (File.Exists("logs"))
             {
-                Console.WriteLine("No log directory found.");
+                Console.WriteLine("• Logs");
+                Console.WriteLine("==================\n");
                 return;
             }
-            var files = Directory.GetFiles("logs", "*.json");
-            if (!files.Any())
-            {
-                Console.WriteLine("No log files found.");
-                return;
-            }
-            foreach (var file in files)
-                Console.WriteLine("• " + Path.GetFileName(file));
+
+            Console.WriteLine("No log files found.");
             Console.WriteLine("==================\n");
         }
 
+
         public void ShowLogEntries(string filename)
         {
-            string path = Path.Combine("logs", filename);
+            string path = filename;
             if (!File.Exists(path))
             {
                 Console.WriteLine("Log file does not exist.");
