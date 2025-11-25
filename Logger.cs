@@ -22,7 +22,7 @@ namespace AutoCompare
             _logs = LoadLogs();
         }
 
-        //public static void Log(string username, string action)
+         //public static void Log(string username, string action)
         public static void Log(string errorScope, Exception ex)
         {
             var entry = new Dictionary<string, string>
