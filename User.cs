@@ -10,7 +10,7 @@ namespace AutoCompare
     public static class PasswordValidator
     {
         public static bool IsStrong(string password)
-        {
+         {
             if (string.IsNullOrWhiteSpace(password)) return false;
             if (password.Length < 6) return false;
             if (!System.Linq.Enumerable.Any(password, char.IsUpper)) return false;
