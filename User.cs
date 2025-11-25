@@ -68,7 +68,7 @@ namespace AutoCompare
             
             catch (Exception ex)
             {
-                Logger.Log("system", "User.ReadHiddenPassword", ex.ToString());
+                Logger.Log("User.ReadHiddenPassword:", ex);
                 Console.WriteLine("An error occurred while reading password input.");
                 return string.Empty;
             }
@@ -118,7 +118,7 @@ namespace AutoCompare
             }
             catch (Exception ex)
             {
-                Logger.Log(Username, "User.DeleteAccount", ex.ToString());
+                Logger.Log("User.DeleteAccount:", ex);
                 Console.WriteLine("An error occurred while deleting the account.");
                 return false;
             }
@@ -152,7 +152,7 @@ namespace AutoCompare
             }
             catch (Exception ex)
             {
-                Logger.Log("system", "User.Sha256", ex.ToString());
+                Logger.Log("User.Sha256:", ex);
                 Console.WriteLine("An error occurred while hashing data.");
                 return string.Empty; // Bästa fallback när hashning misslyckas
             }

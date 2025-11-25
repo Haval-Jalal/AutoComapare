@@ -31,7 +31,7 @@ namespace AutoCompare
         catch (Exception ex)
         
         {
-            Logger.Log($"AiHelper constructor error: {ex.Message}");
+            Logger.Log( $"AiHelper constructor error:", ex);
             throw; // kastar vidare samma exception utan att ändra beteendet
         }
     }
@@ -101,14 +101,14 @@ namespace AutoCompare
             }
             catch (Exception ex)
             {
-                Logger.Log($"ChatMessagesAsync JSON parse error: {ex.Message}");
+                Logger.Log($"ChatMessagesAsync JSON parse error:", ex);
                 throw new Exception("Failed to parse OpenAI response JSON.", ex);
             }
         }
             
             catch (Exception ex)
             {
-                Logger.Log($"ChatMessagesAsync error: {ex.Message}");
+                Logger.Log($"ChatMessagesAsync error:", ex);
                 throw; // kasta vidare felet som innan
             }
         }

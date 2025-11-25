@@ -46,7 +46,7 @@ namespace AutoCompare
             }
             catch (Exception ex)
             {
-                Logger.Log("", $"Car constructor error for {regNumber}: {ex.Message}");
+                Logger.Log($"Car constructor error for {regNumber}", ex);
                 // Säker fallback
                 RegNumber = regNumber ?? "UNKNOWN";
                 Brand = brand ?? "UNKNOWN";

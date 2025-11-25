@@ -90,7 +90,9 @@ namespace AutoCompare
             }
             _userStore.RemoveItem(user); // Save is handled by DataStore
             Console.WriteLine($"User '{username}' has been deleted.");
-            _logger.Log("admin", $"Deleted user: {username}");
+            //_logger.Log("admin", $"Deleted user: {username}");
+            //Logger.Log("system", "AskAiChatLoop", ex);
+
         }
 
         public void ShowLogFiles()

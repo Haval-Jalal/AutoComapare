@@ -63,7 +63,7 @@ namespace AutoCompare
             catch (Exception ex)
             {
                 // Logga felet utan att bryta programmet
-                Logger.Log($"SaveToJson failed for file '{Filename}': {ex.Message}");
+                Logger.Log($"SaveToJson failed for file '{Filename}", ex);
             }
         }
 
@@ -87,7 +87,7 @@ namespace AutoCompare
             catch (Exception ex)
             {
                 // Logga felet utan att krascha programmet
-                Logger.Log($"LoadFromJson failed for file '{Filename}': {ex.Message}");
+                Logger.Log($"LoadFromJson failed for file '{Filename}", ex);
                 // Säkerställ att List är tom om ett fel inträffar
                 List = new List<T>();
             }

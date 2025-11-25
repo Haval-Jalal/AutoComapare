@@ -70,7 +70,9 @@ namespace AutoCompare
             }
             catch (Exception ex)
             {
-                Logger.Log($"EvaluateCar error: {ex.Message}");
+                //Logger.Log($"EvaluateCar error: {ex.Message}");
+                Logger.Log("EvaluateCar", ex);
+
                 AnsiConsole.MarkupLine("[red]An error occurred while evaluating the car.[/]");
             }
         }
@@ -107,7 +109,9 @@ namespace AutoCompare
             }
             catch (Exception ex)
             {
-                Logger.Log($"SearchByRegNumberInteractive error: {ex.Message}");
+                //Logger.Log($"SearchByRegNumberInteractive error: {ex.Message}");
+                Logger.Log("SearchByRegNumberInteractive:", ex);
+
                 AnsiConsole.MarkupLine("[red]An error occurred while searching/displaying the car information.[/]");
             }
         }

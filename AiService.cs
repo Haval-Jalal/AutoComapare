@@ -80,7 +80,7 @@ namespace AutoCompare
             catch (Exception ex)
             {
 
-                Logger.Log($"AskCarModelAsync error: {ex.Message}\nStackTrace: {ex.StackTrace}");
+                Logger.Log($"AskCarModelAsync error:", ex);
                 // Return a graceful error AiResult for the caller to display
                 return new AiResult
                 {

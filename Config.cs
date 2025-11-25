@@ -19,7 +19,7 @@ public static class Config
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"Failed to load .env file: {ex.Message}");
             Console.ResetColor();
-            Logger.Log($"Config Load error: {ex.Message}");
+            Logger.Log($"Config Load error:", ex);
         }
 
         _loaded = true;
@@ -45,7 +45,7 @@ public static class Config
         }
         catch (Exception ex)
         {
-            Logger.Log($"Config Require error: {ex.Message}");
+            Logger.Log($"Config Require error:", ex);
             throw; // kasta vidare om du vill att felet ska stoppa exekvering
         }
     }

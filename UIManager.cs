@@ -11,7 +11,8 @@ namespace AutoCompare
         private readonly DataStore<User> _userStore = new DataStore<User>("users.json");
         private readonly DataStore<Car> _carStore = new DataStore<Car>("cars.json");
         private readonly DataStore<CarSearch> _carSearchStore = new DataStore<CarSearch>("carsearchs.json");
-        private readonly Logger _logger = new Logger("logs.json");
+        private readonly Logger _logger = new Logger();
+        //private readonly Logger _logger = new Logger("logs.json");
         private readonly Admin _admin;
         private string? _loggedInUser;
         private readonly AIService _aiService = new AIService();
@@ -387,7 +388,8 @@ namespace AutoCompare
             }
             catch (Exception ex)
             {
-                _logger.Log("system", "Start", ex.ToString());
+                //_logger.Log("system", "Start", ex.ToString());
+                Logger.Log("Start:", ex);
                 AnsiConsole.MarkupLine($"[red]Critical error in Start():[/] {Markup.Escape(ex.Message)}");
             }
         }
@@ -442,7 +444,7 @@ namespace AutoCompare
                         convo.RemoveAt(convo.Count - 1); // remove user message so not resent
 
                         // NEW: log AI failure
-                        _logger.Log("system", "AskAiChatLoop.AI", ex.ToString());
+                        Logger.Log("AskAiChatLoop.AI:", ex);
 
                         continue;
                     }
@@ -508,7 +510,7 @@ namespace AutoCompare
             catch (Exception ex)
             {
                 // NEW: full fallback logger
-                _logger.Log("system", "AskAiChatLoop", ex.ToString());
+                Logger.Log("AskAiChatLoop:", ex);
 
                 AnsiConsole.MarkupLine($"[red]Critical error in AI chat:[/] {EscapeMarkup(ex.Message)}");
             }
