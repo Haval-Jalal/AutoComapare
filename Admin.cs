@@ -9,17 +9,17 @@ namespace AutoCompare
     public class Admin
     {
         private readonly DataStore<User> _userStore;
-        private readonly Logger _logger;
+        
 
         private const string AdminUsername = "admin.autocompare@gmail.com";
         private const string AdminPassword = "Admin123!";
 
         public bool IsLoggedIn { get; private set; }
 
-        public Admin(DataStore<User> userStore, Logger logger)
+        public Admin(DataStore<User> userStore)
         {
             _userStore = userStore;
-            _logger = logger;
+            
         }
 
         public bool TryLogin(string username, string password)
@@ -90,7 +90,7 @@ namespace AutoCompare
             }
             _userStore.RemoveItem(user); // Save is handled by DataStore
             Console.WriteLine($"User '{username}' has been deleted.");
-            _logger.Log("admin", $"Deleted user: {username}");
+            
         }
 
         public void ShowLogFiles()

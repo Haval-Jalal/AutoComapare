@@ -1,6 +1,7 @@
 ﻿using Spectre.Console;
 using System;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace AutoCompare
@@ -11,7 +12,7 @@ namespace AutoCompare
         private readonly DataStore<User> _userStore = new DataStore<User>("users.json");
         private readonly DataStore<Car> _carStore = new DataStore<Car>("cars.json");
         private readonly DataStore<CarSearch> _carSearchStore = new DataStore<CarSearch>("carsearchs.json");
-        private readonly Logger _logger = new Logger("logs/logs.json");
+
         private readonly Admin _admin;
         private string? _loggedInUser;
         private readonly AIService _aiService = new AIService();
@@ -22,7 +23,7 @@ namespace AutoCompare
 
         public UIManager()
         {
-            _admin = new Admin(_userStore, _logger);
+            _admin = new Admin(_userStore);
         }
         private void ShowGuestMenu()
         {
@@ -127,7 +128,7 @@ namespace AutoCompare
                 new SelectionPrompt<TwoFactorMethod>()
                     .Title("[yellow]Choose 2FA method:[/]")
                     .AddChoices(TwoFactorMethod.none, TwoFactorMethod.Email, TwoFactorMethod.SMS));
-            
+
             string? contact = null;
 
             if (method == TwoFactorMethod.Email)
@@ -208,45 +209,45 @@ namespace AutoCompare
 
             // När användaren väljer "Back" returnerar metoden och användaren är tillbaka i ShowUserMenu
         }
-        
+
 
 
         // CHANGED: Login uses _userStore (shared)
         private void Login()
-{
-    AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]");
-    AnsiConsole.MarkupLine("[bold green]🔐 Login[/]");
-    AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]\n");
+        {
+            AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]");
+            AnsiConsole.MarkupLine("[bold green]🔐 Login[/]");
+            AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]\n");
 
-    var username = AnsiConsole.Ask<string>(
-        "[yellow]Enter email[/] [grey](type 'exit' to go back)[/]:").Trim();
+            var username = AnsiConsole.Ask<string>(
+                "[yellow]Enter email[/] [grey](type 'exit' to go back)[/]:").Trim();
 
-    if (username.Equals("exit", StringComparison.OrdinalIgnoreCase))
-        return;
+            if (username.Equals("exit", StringComparison.OrdinalIgnoreCase))
+                return;
 
-    var password = ReadHiddenPassword("Enter password:").Trim();
+            var password = ReadHiddenPassword("Enter password:").Trim();
 
-    // Admin login check
-    if (_admin.TryLogin(username, password))
-    {
-        AnsiConsole.MarkupLine($"\n[green]🛠️ Logged in as Admin![/]");
-        Pause();
-        AdminPanel();
-        return;
-    }
+            // Admin login check
+            if (_admin.TryLogin(username, password))
+            {
+                AnsiConsole.MarkupLine($"\n[green]🛠️ Logged in as Admin![/]");
+                Pause();
+                AdminPanel();
+                return;
+            }
 
-    var user = _userStore.List.FirstOrDefault(u =>
-        u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            var user = _userStore.List.FirstOrDefault(u =>
+                u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
 
-    if (user == null)
-    {
-        AnsiConsole.MarkupLine("[red]❌ No account found with that email.[/]");
-        Pause();
-        return;
-    }
+            if (user == null || !user.AttemptLogin(password))
+            {
+                AnsiConsole.MarkupLine("[red]❌ No account found with that email.[/]");
+                Pause();
+                return;
+            }
 
-    if (!user.CheckPassword(password))
-    {
+            if (!user.CheckPassword(password))
+            {
                 AnsiConsole.MarkupLine("\n[red]✗ Invalid password.[/]");
                 // Allow 3 attempts
                 int attempts = 1;
@@ -276,21 +277,21 @@ namespace AutoCompare
                 }
             }
 
-    // 2FA Verification
-    bool verified = TwoFactor.Verify(user.TwoFactorChoice, user.Email, user.PhoneNumber);
+            // 2FA Verification
+            bool verified = TwoFactor.Verify(user.TwoFactorChoice, user.Email, user.PhoneNumber);
 
-    if (!verified)
-    {
-        AnsiConsole.MarkupLine("[red]❌ Login failed due to invalid 2FA code.[/]");
-        Pause();
-        return;
-    }
+            if (!verified)
+            {
+                AnsiConsole.MarkupLine("[red]❌ Login failed due to invalid 2FA code.[/]");
+                Pause();
+                return;
+            }
 
-    _loggedInUser = user.Username;
+            _loggedInUser = user.Username;
 
-    AnsiConsole.MarkupLine($"\n[green]✅ Welcome back, [bold]{user.Username}[/]![/]");
-    Pause();
-}
+            AnsiConsole.MarkupLine($"\n[green]✅ Welcome back, [bold]{user.Username}[/]![/]");
+            Pause();
+        }
 
         private void Logout()
         {
@@ -442,37 +443,45 @@ namespace AutoCompare
         //AI 
         public async Task Start()
         {
-            _userStore.LoadFromJson();
-            _carStore.LoadFromJson();
-            _carSearchStore.LoadFromJson();
-
-            ShowIntroAnimation();
-
-            while (true)
+            try
             {
-                AnsiConsole.Clear();
+                _userStore.LoadFromJson();
+                _carStore.LoadFromJson();
+                _carSearchStore.LoadFromJson();
 
-                var title = new FigletText("AutoCompare")
-                    .Centered()
-                    .Color(Color.Green);
-                AnsiConsole.Write(title);
-                AnsiConsole.WriteLine();
+                ShowIntroAnimation();
 
-                if (_loggedInUser == null)
+                while (true)
                 {
-                    ShowGuestMenu();
-                }
-                else
-                {
-                    await ShowUserMenu();
-                }
+                    AnsiConsole.Clear();
 
-                var centeredText = new Panel("[yellow]Select an option:[/]")
-                    .Border(BoxBorder.None)
-                    .Expand()
-                    .Padding(1, 1, 1, 1);
+                    var title = new FigletText("AutoCompare")
+                        .Centered()
+                        .Color(Color.Green);
+                    AnsiConsole.Write(title);
+                    AnsiConsole.WriteLine();
 
-                AnsiConsole.Write(centeredText);
+                    if (_loggedInUser == null)
+                    {
+                        ShowGuestMenu();
+                    }
+                    else
+                    {
+                        await ShowUserMenu();
+                    }
+
+                    var centeredText = new Panel("[yellow]Select an option:[/]")
+                        .Border(BoxBorder.None)
+                        .Expand()
+                        .Padding(1, 1, 1, 1);
+
+                    AnsiConsole.Write(centeredText);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("Start:", ex);
+                AnsiConsole.MarkupLine($"[red]Fatal error:[/] {EscapeMarkup(ex.Message)}");
             }
         }
 
@@ -480,10 +489,12 @@ namespace AutoCompare
         // AskAiChatLoop: ChatGPT-style multi-turn AI chat for cars with minimal emojis and clean output
         private async Task AskAiChatLoop()
         {
+            try
+            { 
             AnsiConsole.MarkupLine("[cyan]🚗 AI Car Chat — ask about car models (type 'exit' to go back)[/]");
             var helper = new AiHelper(); // AiHelper reads OPENAI_API_KEY from env
 
-            const string systemInstruction = 
+            const string systemInstruction =
                 "You are an expert automotive assistant. Answer clearly and factually. " +
                 "Use minimal headings, but emojis are allowed to mark pros, cons, and tips. " +
                 "✅ = positive / advantage, ⚠️ = caution / drawback, 🛠️ = maintenance / tip. " +
@@ -517,8 +528,10 @@ namespace AutoCompare
                 }
                 catch (Exception ex)
                 {
+                    
                     AnsiConsole.MarkupLine($"[red]AI error:[/] {EscapeMarkup(ex.Message)}");
                     convo.RemoveAt(convo.Count - 1); // remove user message so not resent
+                    Logger.Log("AskAiChatLoop.AI:", ex);
                     continue;
                 }
 
@@ -582,6 +595,12 @@ namespace AutoCompare
                 // don't block user if save fails
             }
         }
+        catch (Exception ex)
+            {
+            Logger.Log("AskAiChatLoop:", ex);
+            AnsiConsole.MarkupLine($"[red]Critical error in AI chat: [/] {EscapeMarkup(ex.Message)}"); 
+            }
+         }
 
         // Escape text safely for Spectre.Console
         private string EscapeMarkup(string text)

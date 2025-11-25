@@ -96,37 +96,48 @@ namespace AutoCompare
 
         public void EvaluateCar(Car car)
         {
-            int carAge = DateTime.Now.Year - car.Year;
-            string message;
-            Color panelColor;
-
-            if (car.Mileage > 200000 && carAge > 12)
+            try
             {
-                car.Recommendation = Recommendation.RiskyPurchase;
-                message = "[red]Risky Purchase:[/] High mileage, several known issues, many previous owners, and an older vehicle age.";
-                panelColor = Color.Red;
-            }
-            else if (car.Mileage < 100000 && carAge < 5)
-            {
-                car.Recommendation = Recommendation.GoodInvestment;
-                message = "[green]Good Investment:[/] Low mileage, minimal issues, few previous owners, and a relatively new model.";
-                panelColor = Color.Green;
-            }
-            else
-            {
-                car.Recommendation = Recommendation.Acceptable;
-                message = "[yellow]Acceptable:[/] Moderate mileage, some known issues, average ownership history, or mid-range vehicle age.";
-                panelColor = Color.Yellow;
-            }
 
-            var panel = new Panel(message)
-                .Header("Car Evaluation", Justify.Center)
-                .Border(BoxBorder.Rounded)
-                .BorderStyle(new Style(panelColor))
-                .Padding(1, 1, 1, 1)
-                .Expand();
 
-            AnsiConsole.Write(panel);
+                int carAge = DateTime.Now.Year - car.Year;
+                string message;
+                Color panelColor;
+
+                if (car.Mileage > 200000 && carAge > 12)
+                {
+                    car.Recommendation = Recommendation.RiskyPurchase;
+                    message = "[red]Risky Purchase:[/] High mileage, several known issues, many previous owners, and an older vehicle age.";
+                    panelColor = Color.Red;
+                }
+                else if (car.Mileage < 100000 && carAge < 5)
+                {
+                    car.Recommendation = Recommendation.GoodInvestment;
+                    message = "[green]Good Investment:[/] Low mileage, minimal issues, few previous owners, and a relatively new model.";
+                    panelColor = Color.Green;
+                }
+                else
+                {
+                    car.Recommendation = Recommendation.Acceptable;
+                    message = "[yellow]Acceptable:[/] Moderate mileage, some known issues, average ownership history, or mid-range vehicle age.";
+                    panelColor = Color.Yellow;
+                }
+
+                var panel = new Panel(message)
+                    .Header("Car Evaluation", Justify.Center)
+                    .Border(BoxBorder.Rounded)
+                    .BorderStyle(new Style(panelColor))
+                    .Padding(1, 1, 1, 1)
+                    .Expand();
+
+                AnsiConsole.Write(panel);
+
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("EvaluateCar", ex);
+                AnsiConsole.MarkupLine("An error occurred during car evaluation.");
+            }
         }
         // Method to search by registration number
         public void SearchByRegNumber()
