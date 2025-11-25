@@ -11,8 +11,8 @@ namespace AutoCompare
         private readonly DataStore<User> _userStore = new DataStore<User>("users.json");
         private readonly DataStore<Car> _carStore = new DataStore<Car>("cars.json");
         private readonly DataStore<CarSearch> _carSearchStore = new DataStore<CarSearch>("carsearchs.json");
-        private readonly Logger _logger = new Logger();
         //private readonly Logger _logger = new Logger("logs.json");
+       
         private readonly Admin _admin;
         private string? _loggedInUser;
         private readonly AIService _aiService = new AIService();
@@ -23,7 +23,7 @@ namespace AutoCompare
 
         public UIManager()
         {
-            _admin = new Admin(_userStore, _logger);
+            _admin = new Admin(_userStore/*, _logger*/);
         }
         private void ShowGuestMenu()
         {
@@ -124,6 +124,8 @@ namespace AutoCompare
             Pause();
         }
 
+
+
         private void AdminPanel()
         {
             while (_admin.IsLoggedIn)
@@ -178,12 +180,20 @@ namespace AutoCompare
             }
 
             var user = _userStore.List.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-            if (user == null || !user.CheckPassword(password))
+            if (user == null || !user.AttemptLogin(password))
             {
-                AnsiConsole.MarkupLine("[red]Wrong email or password.[/]");
                 Pause();
                 return;
             }
+
+
+            //var user = _userStore.List.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
+            //if (user == null || !user.CheckPassword(password))
+            //{
+            //    AnsiConsole.MarkupLine("[red]Wrong email or password.[/]");
+            //    Pause();
+            //    return;
+            //}
 
             bool verified = TwoFactor.Verify(user.TwoFactorChoice, user.Email, user.PhoneNumber);
             if (!verified)

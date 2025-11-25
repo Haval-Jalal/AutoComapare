@@ -157,6 +157,22 @@ namespace AutoCompare
                 return string.Empty; // Bästa fallback när hashning misslyckas
             }
         }
+        //NYY
+        public bool AttemptLogin(string enteredPassword)
+        {
+            if (!CheckPassword(enteredPassword))
+            {
+                Console.WriteLine("Wrong password!");
+                Logger.Log("LoginFailed", new Exception($"User {Username} entered wrong password."));
+                return false;
+            }
+            else
+            {
+                Console.WriteLine("Login successful!");
+                return true;
+            }
+        }
+
 
     }
 }

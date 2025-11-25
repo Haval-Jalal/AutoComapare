@@ -9,17 +9,17 @@ namespace AutoCompare
     public class Admin
     {
         private readonly DataStore<User> _userStore;
-        private readonly Logger _logger;
+        //private readonly Logger _logger;
 
         private const string AdminUsername = "admin.autocompare@gmail.com";
         private const string AdminPassword = "Admin123!";
 
         public bool IsLoggedIn { get; private set; }
 
-        public Admin(DataStore<User> userStore, Logger logger)
+        public Admin(DataStore<User> userStore/*, Logger logger*/)
         {
             _userStore = userStore;
-            _logger = logger;
+            //_logger = logger;
         }
 
         public bool TryLogin(string username, string password)

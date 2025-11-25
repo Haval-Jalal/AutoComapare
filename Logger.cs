@@ -5,12 +5,18 @@ using System.Text.Json;
 
 namespace AutoCompare
 {
-    public class Logger
+    public static class Logger
     {
+        
         private static readonly string _filePath = "logs.json";
         private static List<Dictionary<string, string>> _logs = new List<Dictionary<string, string>>();
 
-        
+        //public static void SetFilePath(string path, string _filePath)
+        //{
+        //    _filePath = path;
+        //    _logs = LoadLogs(); // ladda loggar från den nya filen
+        //}
+
         static Logger()
         {
             _logs = LoadLogs();
@@ -49,9 +55,7 @@ namespace AutoCompare
         private static List<Dictionary<string, string>> LoadLogs()
         {
             if (!File.Exists(_filePath))
-                throw new FileNotFoundException();
                 return new List<Dictionary<string, string>>();
-            
 
             var json = File.ReadAllText(_filePath);
             return JsonSerializer.Deserialize<List<Dictionary<string, string>>>(json) ?? new List<Dictionary<string, string>>();
