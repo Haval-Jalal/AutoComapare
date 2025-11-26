@@ -1,4 +1,5 @@
-﻿using DotNetEnv;
+﻿using AutoCompare;
+using DotNetEnv;
 
 public static class Config
 {
@@ -18,6 +19,7 @@ public static class Config
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"Failed to load .env file: {ex.Message}");
             Console.ResetColor();
+            Logger.Log($"Config Load error:", ex);
         }
 
         _loaded = true;
@@ -32,10 +34,21 @@ public static class Config
     public static void Require(params string[] keys)
     {
         Load();
-        foreach (var k in keys)
+
+        try
         {
-            if (string.IsNullOrWhiteSpace(Get(k)))
-                throw new Exception($"Missing required configuration: {k}");
+
+
+            foreach (var k in keys)
+            {
+                if (string.IsNullOrWhiteSpace(Get(k)))
+                    throw new Exception($"Missing required configuration: {k}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Log($"Config Require error:", ex);
+            throw;
         }
     }
 }

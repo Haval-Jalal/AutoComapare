@@ -38,32 +38,41 @@ namespace AutoCompare
         // STARRED: keep the ReadHiddenPassword static helper if you use it
         public static string ReadHiddenPassword()
         {
-            StringBuilder input = new StringBuilder();
-            while (true)
+            try
             {
-                var keyInfo = Console.ReadKey(true);
-                if (keyInfo.Key == ConsoleKey.Enter)
+                StringBuilder input = new StringBuilder();
+                while (true)
                 {
-                    Console.WriteLine();
-                    break;
-                }
-                else if (keyInfo.Key == ConsoleKey.Backspace)
-                {
-                    if (input.Length > 0)
+                    var keyInfo = Console.ReadKey(true);
+                    if (keyInfo.Key == ConsoleKey.Enter)
                     {
-                        input.Remove(input.Length - 1, 1);
-                        Console.Write("\b \b");
+                        Console.WriteLine();
+                        break;
+                    }
+                    else if (keyInfo.Key == ConsoleKey.Backspace)
+                    {
+                        if (input.Length > 0)
+                        {
+                            input.Remove(input.Length - 1, 1);
+                            Console.Write("\b \b");
+                        }
+                    }
+                    else
+                    {
+                        input.Append(keyInfo.KeyChar);
+                        Console.Write("*");
                     }
                 }
-                else
-                {
-                    input.Append(keyInfo.KeyChar);
-                    Console.Write("*");
-                }
+                return input.ToString();
             }
-            return input.ToString();
-        }
 
+            catch (Exception ex)
+            {
+                Logger.Log("User.ReadHiddenPassword:", ex);
+                Console.WriteLine("An error occurred while reading password input.");
+                return string.Empty;
+            }
+        }
         // Helps validate email format, so user uses a real email address.
         public static bool IsValidEmail(string email)
         {
@@ -121,8 +130,17 @@ namespace AutoCompare
         // CHANGED: DeleteAccount does not load json or create new datastore. Caller must pass store.
         public bool DeleteAccount(DataStore<User> userStore)
         {
-            bool removed = userStore.RemoveItem(this); // RemoveItem will handle saving
-            return removed;
+            try
+            {
+                bool removed = userStore.RemoveItem(this); // RemoveItem will handle saving
+                return removed;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("User.DeleteAccount:", ex);
+                Console.WriteLine("An error occurred while deleting the account.");
+                return false;
+            }
         }
 
         // FORGOT PASSWORD
@@ -255,10 +273,36 @@ namespace AutoCompare
 
         private static string Sha256(string input)
         {
-            using var sha = SHA256.Create();
-            var bytes = Encoding.UTF8.GetBytes(input);
-            var hash = sha.ComputeHash(bytes);
-            return Convert.ToHexString(hash).ToLowerInvariant();
+            try
+            {
+
+
+                using var sha = SHA256.Create();
+                var bytes = Encoding.UTF8.GetBytes(input);
+                var hash = sha.ComputeHash(bytes);
+                return Convert.ToHexString(hash).ToLowerInvariant();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("User.Sha256:", ex);
+                Console.WriteLine("An error occurred while hashing data.");
+                return string.Empty;
+            }
         }
+
+        public bool AttemptLogin(string enteredPassword)
+        {
+            if (!CheckPassword(enteredPassword))
+            {
+                Console.WriteLine("Wrong password!");
+                Logger.Log("LoginFailed", new Exception($"User {Username} entered wrong password."));
+                return false;
+            }
+           else
+            {
+               Console.WriteLine("Login successful!");
+                return true;
+            }
+        }   
     }
 }

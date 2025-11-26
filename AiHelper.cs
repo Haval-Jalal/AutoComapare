@@ -18,12 +18,20 @@ namespace AutoCompare
 
         public AiHelper()
         {
-            _apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
-                ?? throw new InvalidOperationException("OPENAI_API_KEY is missing. Add it to .env or environment variables.");
+            try
+            {
+                _apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+                    ?? throw new InvalidOperationException("OPENAI_API_KEY is missing. Add it to .env or environment variables.");
 
-            _http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
-            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
-            _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                _http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+                _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+                _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"AiHelper Constructor error:", ex);
+                throw;
+            }
         }
 
         // Send a chat request using role-labelled messages.
@@ -37,58 +45,68 @@ namespace AutoCompare
         {
             if (messages == null) throw new ArgumentNullException(nameof(messages));
 
-            // Build messages array for JSON payload
-            var payloadMessages = new List<object>();
-            foreach (var m in messages)
-            {
-                if (string.IsNullOrWhiteSpace(m.role) || string.IsNullOrWhiteSpace(m.content)) continue;
-                payloadMessages.Add(new { role = m.role, content = m.content });
-            }
-
-            var payload = new
-            {
-                model = model,
-                messages = payloadMessages,
-                max_tokens = maxTokens,
-                temperature = temperature
-            };
-
-            var json = JsonSerializer.Serialize(payload);
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            using var resp = await _http.PostAsync(ChatUrl, content);
-            var respBody = await resp.Content.ReadAsStringAsync();
-
-            if (!resp.IsSuccessStatusCode)
-            {
-                // Return a helpful exception with API body for debugging/logging
-                throw new Exception($"OpenAI API error {(int)resp.StatusCode}: {respBody}");
-            }
-
             try
             {
-                using var doc = JsonDocument.Parse(respBody);
-                // Typical shape: { choices: [ { message: { role: "...", content: "..." } } ], ... }
-                var root = doc.RootElement;
-                if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
+                // Build messages array for JSON payload
+                var payloadMessages = new List<object>();
+                foreach (var m in messages)
                 {
-                    var first = choices[0];
-                    if (first.TryGetProperty("message", out var messageElem) &&
-                        messageElem.TryGetProperty("content", out var contentElem))
-                    {
-                        return contentElem.GetString() ?? string.Empty;
-                    }
-
-                    // Some models return text in "text" (legacy) - handle defensively
-                    if (first.TryGetProperty("text", out var textElem))
-                        return textElem.GetString() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(m.role) || string.IsNullOrWhiteSpace(m.content)) continue;
+                    payloadMessages.Add(new { role = m.role, content = m.content });
                 }
 
-                // Fallback: return the entire body if parsing failed to find message content
-                return respBody;
+                var payload = new
+                {
+                    model = model,
+                    messages = payloadMessages,
+                    max_tokens = maxTokens,
+                    temperature = temperature
+                };
+
+                var json = JsonSerializer.Serialize(payload);
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
+                using var resp = await _http.PostAsync(ChatUrl, content);
+                var respBody = await resp.Content.ReadAsStringAsync();
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    // Return a helpful exception with API body for debugging/logging
+                    throw new Exception($"OpenAI API error {(int)resp.StatusCode}: {respBody}");
+                }
+
+                try
+                {
+                    using var doc = JsonDocument.Parse(respBody);
+                    // Typical shape: { choices: [ { message: { role: "...", content: "..." } } ], ... }
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
+                    {
+                        var first = choices[0];
+                        if (first.TryGetProperty("message", out var messageElem) &&
+                            messageElem.TryGetProperty("content", out var contentElem))
+                        {
+                            return contentElem.GetString() ?? string.Empty;
+                        }
+
+                        // Some models return text in "text" (legacy) - handle defensively
+                        if (first.TryGetProperty("text", out var textElem))
+                            return textElem.GetString() ?? string.Empty;
+                    }
+
+                    // Fallback: return the entire body if parsing failed to find message content
+                    return respBody;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"ChatMessagesAsync JSON parse error:", ex);
+                    throw new Exception("Failed to parse OpenAI response JSON.", ex);
+                }
             }
+
             catch (Exception ex)
             {
-                throw new Exception("Failed to parse OpenAI response JSON.", ex);
+                Logger.Log($"ChatMessagesAsync error:", ex);
+                throw;
             }
         }
 

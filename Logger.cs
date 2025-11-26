@@ -5,52 +5,49 @@ using System.Text.Json;
 
 namespace AutoCompare
 {
-    public class Logger
+    public static class Logger
     {
-        private readonly string _filePath;
-        private List<Dictionary<string, string>> _logs;
+        
+        private static readonly string _filePath = "logs.json";
+        private static List<Dictionary<string, string>> _logs = new List<Dictionary<string, string>>();
 
-        // CHANGED: default path is "logs/logs.json" (folder + file), ensures directory exists
-        public Logger(string filePath = "logs/logs.json")
+        
+        static Logger()
         {
-            _filePath = filePath;
-            var dir = Path.GetDirectoryName(_filePath);
-            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-
             _logs = LoadLogs();
         }
 
-        public void Log(string username, string action)
+        
+        public static void Log(string errorScope, Exception ex)
         {
             var entry = new Dictionary<string, string>
             {
-                { "Timestamp", DateTime.UtcNow.ToString("o") },
-                { "User", username },
-                { "Action", action }
+                { "Scope", errorScope},
+                { "Timestamp", DateTime.Now.ToString ("o") },
+                { "Error Message", ex.ToString() }
             };
             _logs.Add(entry);
             SaveLogs();
         }
 
-        public List<Dictionary<string, string>> GetLogs() => _logs;
+        public static List<Dictionary<string, string>> GetLogs() => _logs;
 
-        public void DisplayLogs()
+        public static void DisplayLogs()
         {
             Console.WriteLine("\n--- System Log ---");
             foreach (var entry in _logs)
             {
-                Console.WriteLine($"{entry["Timestamp"]} | {entry["User"]} | {entry["Action"]}");
+                Console.WriteLine($"{entry["Scope"]} | {entry["TimeStamp"]} | {entry["ErrorMessage"]}");
             }
         }
 
-        private void SaveLogs()
+        private static void SaveLogs()
         {
             var json = JsonSerializer.Serialize(_logs, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_filePath, json);
         }
 
-        private List<Dictionary<string, string>> LoadLogs()
+        private static List<Dictionary<string, string>> LoadLogs()
         {
             if (!File.Exists(_filePath))
                 return new List<Dictionary<string, string>>();

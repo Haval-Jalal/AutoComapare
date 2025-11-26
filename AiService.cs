@@ -79,6 +79,7 @@ namespace AutoCompare
             }
             catch (Exception ex)
             {
+                Logger.Log($"AskCarModelAsync error:", ex);
                 // Return a graceful error AiResult for the caller to display
                 return new AiResult
                 {
@@ -160,6 +161,7 @@ namespace AutoCompare
             return urls;
         }
 
+        
         public void Dispose()
         {
             if (!_disposed)
