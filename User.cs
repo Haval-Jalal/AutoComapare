@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace AutoCompare
 {
+    // Enkel hjälparklass för att bedöma lösenordsstyrka
     public static class PasswordValidator
     {
         public static bool IsStrong(string password)
@@ -20,11 +21,9 @@ namespace AutoCompare
             return true;
         }
     }
-    // NOTE: TwoFactorMethod enum is defined elsewhere; keep it consistent.
     public class User
     {
-        // CHANGED: made setters public so System.Text.Json can set properties during deserialization
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid Id { get; set; } = Guid.NewGuid(); //json ska deserialisera
         public string Username { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
         public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
@@ -35,8 +34,8 @@ namespace AutoCompare
 
         public User() { }
 
-        // STARRED: keep the ReadHiddenPassword static helper if you use it
-        public static string ReadHiddenPassword()
+
+        public static string ReadHiddenPassword() //ersätter lösenordet med *
         {
             try
             {
@@ -73,30 +72,30 @@ namespace AutoCompare
                 return string.Empty;
             }
         }
-        // Helps validate email format, so user uses a real email address.
-        public static bool IsValidEmail(string email)
+       
+        public static bool IsValidEmail(string email) //formatkontroll för e-post
         {
             return Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
                 RegexOptions.IgnoreCase);
         }
 
 
-        // CHANGED: Register no longer calls LoadFromJson. It simply sets properties.
-        // The caller (UIManager) should call userStore.AddItem(...) which will Save.
+        //Register sätter bara properties, lagring hanteras av caller/userStore
         public bool Register(string username, string plainPassword, TwoFactorMethod method, string contact)
         {
-            if (!PasswordValidator.IsStrong(plainPassword))
+            if (!PasswordValidator.IsStrong(plainPassword)) //Kontrollerar lösenordsstyrka
             {
                 Console.WriteLine("Password is not strong enough, try again!");
                 return false;
             }
 
-            if (!IsValidEmail(username))
+            if (!IsValidEmail(username)) //Kontrollerar att username är giltig e-post
             {
                 Console.WriteLine("Invalid email format!");
                 return false;
             }
 
+            // Om 2FA via email, kontrollera att kontakt är giltig e-post
             if (method == TwoFactorMethod.Email && (contact == null || !IsValidEmail(contact)))
             {
                 Console.WriteLine("Invalid 2FA email format!");
@@ -121,13 +120,13 @@ namespace AutoCompare
             return true;
         }
 
-        // Check password (unchanged)
+        // Kontrollerar inmatat lösenord mot sparad hash
         public bool CheckPassword(string enteredPassword)
         {
             return PasswordHash == Sha256(enteredPassword);
         }
 
-        // CHANGED: DeleteAccount does not load json or create new datastore. Caller must pass store.
+        // DeleteAccount tar emot userStore och ber store ta bort och spara
         public bool DeleteAccount(DataStore<User> userStore)
         {
             try
@@ -143,20 +142,20 @@ namespace AutoCompare
             }
         }
 
-        // FORGOT PASSWORD
+        // FORGOT PASSWORD — flöde för att nollställa lösenord via användarens sparade 2FA
         public void ForgotPassword(DataStore<User> userStore)
         {
-            // Display header and layout for the screen
+            // Visa rubrik och layout
             Console.Clear();
             AnsiConsole.Write(new FigletText("Forgot Password").Centered().Color(Color.Yellow));
             AnsiConsole.Write(new Rule("[yellow]Password Reset[/]").RuleStyle("grey").Centered());
             AnsiConsole.WriteLine();
 
-            // Ask for the username (email) and try to find the user in the data store
+            // Fråga efter email och hitta användaren i store
             string username = AnsiConsole.Ask<string>("Enter your [green]email[/]:").Trim();
             var user = userStore.List.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
 
-            // If no matching account is found, show options and exit or redirect
+            // Om ingen användare hittas, erbjud val
             if (user == null)
             {
                 AnsiConsole.MarkupLine($"\n[red]✗ No account found:[/] [bold]{username}[/]");
@@ -166,7 +165,7 @@ namespace AutoCompare
 
                 if (action == "Register")
                 {
-                    // Cannot call UIManager.Register() from here — instruct user to use the Register menu
+                    // Informera om att använda registreringsmenyn
                     AnsiConsole.MarkupLine("[yellow]Please use the Register option from the main menu.[/]");
                     Console.ReadKey(true);
                     return;
@@ -182,11 +181,11 @@ namespace AutoCompare
                 }
             }
 
-            // Confirm that the account exists
+            // Bekräftar att konto finns och visa 2FA-info
             AnsiConsole.MarkupLine($"[green]✓ Account found:[/] [bold]{username}[/]");
             AnsiConsole.MarkupLine("[yellow]Verify your identity with your registered 2FA method.[/]\n");
 
-            // Ensure the user has a saved 2FA method (Email or SMS)
+            // Kontrollerar att användaren har en giltig 2FA-metod
             if (user.TwoFactorChoice != TwoFactorMethod.Email && user.TwoFactorChoice != TwoFactorMethod.SMS)
             {
                 AnsiConsole.MarkupLine("[red]✗ No 2FA method registered on this account. Contact admin for help.[/]");
@@ -194,11 +193,11 @@ namespace AutoCompare
                 return;
             }
 
-            // Determine which contact to use based on the saved 2FA method
+            // Välj kontakt beroende på 2FA-metod
             bool isEmailMethod = user.TwoFactorChoice == TwoFactorMethod.Email;
             string contact = isEmailMethod ? user.Email ?? string.Empty : user.PhoneNumber ?? string.Empty;
 
-            // Stop if the required contact information is missing
+            // Avbryt om kontakt saknas
             if (string.IsNullOrWhiteSpace(contact))
             {
                 AnsiConsole.MarkupLine("[red]✗ No contact information found for the saved 2FA method. Contact admin.[/]");
@@ -206,13 +205,12 @@ namespace AutoCompare
                 return;
             }
 
-            // Inform the user where the verification code is being sent
             AnsiConsole.MarkupLine($"Sending code to: [blue]{contact}[/]");
 
-            // Perform the verification using the existing TwoFactor class
+            // Verifierar med hjälp av TwoFactor-klassen
             bool verified = TwoFactor.Verify(user.TwoFactorChoice, user.Email, user.PhoneNumber);
 
-            // If verification fails, ask the user if they want to try again
+            // Om verifiering misslyckas, erbjuder att försöka igen
             if (!verified)
             {
                 AnsiConsole.MarkupLine("[red]✗ Verification failed.[/]\n");
@@ -223,30 +221,30 @@ namespace AutoCompare
                 return;
             }
 
-            // Verification successful
+            // Verifiering lyckades
             AnsiConsole.MarkupLine("\n[green]✓ Verified![/]\n");
 
-            // Loop until the user enters a valid new password
+            //Loop för att sätta nytt lösenord tills det är giltigt och sparas
             while (true)
             {
                 var newPass = AnsiConsole.Prompt(new TextPrompt<string>("Enter [green]new password[/]:").Secret());
                 var confirm = AnsiConsole.Prompt(new TextPrompt<string>("Confirm:").Secret());
 
-                // Check if passwords match
+                // kontrollerar om lösenord matchar
                 if (newPass != confirm)
                 {
                     AnsiConsole.MarkupLine("[red]✗ Passwords do not match![/]\n");
                     continue;
                 }
 
-                // Check if the password meets strength requirements
+                // Kontrollerar styrkan
                 if (!PasswordValidator.IsStrong(newPass))
                 {
                     AnsiConsole.MarkupLine("[red]✗ Weak password! Must include: upper, lower, digit, special, 6+ chars[/]\n");
                     continue;
                 }
 
-                // Attempt to reset and save the new password
+                // Försök nollställa lösenord och sparar 
                 if (user.ResetPassword(newPass))
                 {
                     userStore.SaveToJson();
@@ -255,11 +253,12 @@ namespace AutoCompare
                     return;
                 }
 
-                // If saving fails, allow retry
+                // försök igen om sparning misslyckas 
                 AnsiConsole.MarkupLine("[red]✗ Failed to reset password. Try again.[/]");
             }
         }
 
+        // nytt lösenord (kontrollerar styrka och uppdaterar hash)
         public bool ResetPassword(string newPassword)
         {
             if (!PasswordValidator.IsStrong(newPassword))
@@ -270,13 +269,12 @@ namespace AutoCompare
             PasswordHash = Sha256(newPassword);
             return true;
         }
-
+        
+        // Hashfunktion för SHA-256
         private static string Sha256(string input)
         {
             try
             {
-
-
                 using var sha = SHA256.Create();
                 var bytes = Encoding.UTF8.GetBytes(input);
                 var hash = sha.ComputeHash(bytes);
