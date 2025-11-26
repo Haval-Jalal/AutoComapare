@@ -251,11 +251,35 @@ namespace AutoCompare
                 return;
             }
 
-            if (!user.CheckPassword(password))
-            {
-                AnsiConsole.MarkupLine("[red]❌ Incorrect password.[/]");
-                Pause();
-                return;
+    if (!user.CheckPassword(password))
+    {
+                AnsiConsole.MarkupLine("\n[red]✗ Invalid password.[/]");
+                // Allow 3 attempts
+                int attempts = 1;
+                while (attempts < 3)
+                {
+                    password = AnsiConsole.Prompt(new TextPrompt<string>("Re-enter [green]password[/]:").Secret());
+                    if (user.CheckPassword(password)) break;
+                    attempts++;
+                    AnsiConsole.MarkupLine("\n[red]✗ Invalid password.[/]");
+                }
+                if (attempts == 3 && !user.CheckPassword(password))
+                {
+                    var select = AnsiConsole.Prompt(new SelectionPrompt<string>()
+                        .Title("Having trouble logging in?")
+                        .AddChoices(new[] { "Forgot Password", "Try Again", "Cancel" }));
+                    if (select == "Forgot Password")
+                    {
+                        user.ForgotPassword(_userStore);
+                        return;
+                    }
+                    if (select == "Try Again")
+                    {
+                        Login(); // Recursive call to restart login
+                        return;
+                    }
+                    if (select == "Cancel") { Pause(); return; }
+                }
             }
 
             // 2FA Verification
@@ -286,37 +310,34 @@ namespace AutoCompare
 
         private void SearchCarMenu()
         {
-            var carSearch = new CarSearch();
+            var carSearch = new CarSearch(_loggedInUser, _userStore);
             var user = _userStore.List.First(u => u.Username == _loggedInUser);
 
             bool running = true;
             while (running)
             {
+                AnsiConsole.Clear();
+                AnsiConsole.Write(
+                    new FigletText("Car Search")
+                        .Centered()
+                        .Color(Color.Green));
+                AnsiConsole.WriteLine();
+
                 var menu = new SelectionPrompt<string>()
                     .Title("[yellow]Search Car Menu:[/]")
-                    .AddChoices("🔍 Search by Registration Number", "📄 Show Search History", "🔙 Back");
+                    .AddChoices("🔍 Search by Registration Number", "📄 Show Search History", "🧹 Clear Search History", "🔙 Back");
 
                 var choice = AnsiConsole.Prompt(menu);
                 switch (choice)
                 {
                     case "🔍 Search by Registration Number":
-                        string reg = AnsiConsole.Ask<string>("Enter registration number:");
-                        carSearch.SearchByRegNumberInteractive(reg);
-                        user.SearchHistory.Add(reg);
-                        _userStore.SaveToJson(); // persist search history change immediately
+                        carSearch.SearchByRegNumber();
                         break;
                     case "📄 Show Search History":
-                        if (user.SearchHistory.Count == 0)
-                        {
-                            AnsiConsole.MarkupLine("[grey]No previous searches.[/]");
-                        }
-                        else
-                        {
-                            AnsiConsole.MarkupLine("[green]Previous Searches:[/]");
-                            foreach (var item in user.SearchHistory)
-                                AnsiConsole.MarkupLine($"- {item}");
-                        }
-                        Pause();
+                        carSearch.ShowSearchHistory(user.Username);
+                        break;
+                    case "🧹 Clear Search History":
+                        carSearch.ClearSearchHistory(user.Username);
                         break;
                     case "🔙 Back":
                         running = false;
