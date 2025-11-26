@@ -112,7 +112,13 @@ namespace AutoCompare
                 if (PasswordValidator.IsStrong(password))
                     break;
 
-                AnsiConsole.MarkupLine("[red]❌ Password not strong enough, please try again![/]");
+                AnsiConsole.Write(
+                    new Panel("[red]❌ Weak password! 6+ chars, upper, lower, digit, special[/]")
+                        .Border(BoxBorder.Rounded)
+                        .BorderStyle(Style.Parse("red"))
+                        .Padding(1, 0, 1, 0)
+                        .Header("[yellow]Password Requirements[/]", Justify.Center)
+                );
             }
 
             // Confirm password
@@ -127,8 +133,8 @@ namespace AutoCompare
             var method = AnsiConsole.Prompt(
                 new SelectionPrompt<TwoFactorMethod>()
                     .Title("[yellow]Choose 2FA method:[/]")
-                    .AddChoices(TwoFactorMethod.none, TwoFactorMethod.Email, TwoFactorMethod.SMS));
-
+                    .AddChoices(TwoFactorMethod.Email, TwoFactorMethod.SMS));
+            
             string? contact = null;
 
             if (method == TwoFactorMethod.Email)
@@ -211,8 +217,6 @@ namespace AutoCompare
         }
 
 
-
-        // CHANGED: Login uses _userStore (shared)
         private void Login()
         {
             AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]");
@@ -349,26 +353,78 @@ namespace AutoCompare
                 .AddChoices("🔑 Reset Password", "🗑 Delete Account", "🔙 Back");
 
             var choice = AnsiConsole.Prompt(menu);
+
             switch (choice)
             {
                 case "🔑 Reset Password":
+                    // First, verify using 2FA
+                    if (user.TwoFactorChoice != TwoFactorMethod.Email && user.TwoFactorChoice != TwoFactorMethod.SMS)
+                    {
+                        AnsiConsole.MarkupLine("[red]No 2FA method registered. Cannot reset password.[/]");
+                        Pause();
+                        return;
+                    }
+
+                    string contact = user.TwoFactorChoice == TwoFactorMethod.Email ? user.Email! : user.PhoneNumber!;
+                    if (string.IsNullOrWhiteSpace(contact))
+                    {
+                        AnsiConsole.MarkupLine("[red]Contact information missing for your 2FA method. Cannot reset password.[/]");
+                        Pause();
+                        return;
+                    }
+
+                    AnsiConsole.MarkupLine($"A verification code will be sent to your registered {user.TwoFactorChoice}.");
+                    if (!TwoFactor.Verify(user.TwoFactorChoice, user.Email, user.PhoneNumber))
+                    {
+                        AnsiConsole.MarkupLine("[red]2FA verification failed. Cannot reset password.[/]");
+                        Pause();
+                        return;
+                    }
+
+                    // Ask for new password after 2FA verified
                     string newPassword = ReadHiddenPassword("Enter new password:");
+                    var confirmPassword = ReadHiddenPassword("Confirm password:");
+
+                    if (newPassword != confirmPassword)
+                    {
+                        AnsiConsole.MarkupLine("[red]Passwords do not match. Password reset failed.[/]");
+                        Pause();
+                        return;
+                    }
+
                     if (user.ResetPassword(newPassword))
                     {
-                        // DataStore won't detect property mutation automatically, so we Save explicitly
-                        _userStore.SaveToJson(); // CHANGED: Save after mutating user object
-                        AnsiConsole.MarkupLine("[green]Password updated[/]");
+                        _userStore.SaveToJson(); // Save new password
+                        AnsiConsole.MarkupLine("[green]Password successfully updated![/]");
+                    }
+                    else
+                    {
+                        AnsiConsole.MarkupLine("[red]Failed to update password.[/]");
                     }
                     Pause();
                     break;
 
                 case "🗑 Delete Account":
+                    // Ask for confirmation
                     if (AnsiConsole.Confirm($"Are you sure you want to delete account {_loggedInUser}?"))
                     {
-                        bool removed = user.DeleteAccount(_userStore); // DeleteAccount uses userStore.RemoveItem
-                        if (removed)
+                        string enteredPassword = ReadHiddenPassword("Enter your password to confirm deletion:");
+                        if (user.CheckPassword(enteredPassword))
                         {
-                            _loggedInUser = null;
+                            bool removed = user.DeleteAccount(_userStore);
+                            if (removed)
+                            {
+                                _loggedInUser = null;
+                                AnsiConsole.MarkupLine("[green]Account deleted successfully[/]");
+                            }
+                            else
+                            {
+                                AnsiConsole.MarkupLine("[red]Failed to delete account[/]");
+                            }
+                        }
+                        else
+                        {
+                            AnsiConsole.MarkupLine("[red]Password did not match. Deleting account failed.[/]");
                         }
                     }
                     Pause();

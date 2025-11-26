@@ -9,7 +9,6 @@ namespace AutoCompare
 {
     public enum TwoFactorMethod
     {
-        none,
         Email,
         SMS
     }
@@ -20,11 +19,6 @@ namespace AutoCompare
         {
             switch (method)
             {
-                case TwoFactorMethod.none:
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("2FA: No verification selected. Access granted.");
-                    Console.ResetColor();
-                    return true;
 
                 case TwoFactorMethod.Email:
                     if (string.IsNullOrWhiteSpace(email))
