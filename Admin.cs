@@ -93,7 +93,7 @@ namespace AutoCompare
             
         }
 
-        public void ShowLogFiles()
+         public void ShowLogFiles()
         {
             Console.WriteLine("\n=== LOG FILES ===");
 
