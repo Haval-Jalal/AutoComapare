@@ -287,20 +287,5 @@ namespace AutoCompare
                 return string.Empty;
             }
         }
-
-        public bool AttemptLogin(string enteredPassword)
-        {
-            if (!CheckPassword(enteredPassword))
-            {
-                Console.WriteLine("Wrong password!");
-                Logger.Log("LoginFailed", new Exception($"User {Username} entered wrong password."));
-                return false;
-            }
-           else
-            {
-               Console.WriteLine("Login successful!");
-                return true;
-            }
-        }   
     }
 }
