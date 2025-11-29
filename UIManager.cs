@@ -229,6 +229,14 @@ namespace AutoCompare
             if (username.Equals("exit", StringComparison.OrdinalIgnoreCase))
                 return;
 
+            if (!User.IsValidEmail(username))
+            {
+                Logger.Log("InvalidEmailFormat", new Exception($"{username} attempted login with invalid email format."));
+                AnsiConsole.MarkupLine("[red]❌ Invalid email format![/]");
+                Pause();
+                return;
+            }
+
             var password = ReadHiddenPassword("Enter password:").Trim();
 
             // Admin login check
@@ -242,17 +250,11 @@ namespace AutoCompare
 
             var user = _userStore.List.FirstOrDefault(u =>
                 u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-            //ÄNDRAT!!!
-            if (user == null || !user.CheckPassword(password))
-            {
-                Logger.Log("LoginFailed", new Exception($"{username} entered wrong password."));
-                AnsiConsole.MarkupLine("[red]❌ No account found with that email.[/]");
-                Pause();
-                return;
-            }
-
+           
+          
             if (!user.CheckPassword(password))
             {
+                Logger.Log("LoginFailed", new Exception($"{username} entered wrong password."));
                 AnsiConsole.MarkupLine("\n[red]✗ Invalid password.[/]");
                 // Allow 3 attempts
                 int attempts = 1;
@@ -287,6 +289,7 @@ namespace AutoCompare
 
             if (!verified)
             {
+                Logger.Log("2FA verification", new Exception($"{username} entered wrong 2FA verification code."));
                 AnsiConsole.MarkupLine("[red]❌ Login failed due to invalid 2FA code.[/]");
                 Pause();
                 return;
