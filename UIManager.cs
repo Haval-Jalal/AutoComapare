@@ -250,8 +250,14 @@ namespace AutoCompare
 
             var user = _userStore.List.FirstOrDefault(u =>
                 u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-           
-          
+
+            if (user == null)
+            {
+                Logger.Log("LoginNoUser", new Exception($"Login attempted for missing user '{username}'"));
+                AnsiConsole.MarkupLine("[red]❌ No account found with that email[/]");
+                Pause();
+                return;
+            }
             if (!user.CheckPassword(password))
             {
                 Logger.Log("LoginFailed", new Exception($"{username} entered wrong password."));
