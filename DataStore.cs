@@ -7,32 +7,29 @@ namespace AutoCompare
 {
     public class DataStore<T>
     {
-        // The in-memory list that holds objects of type T
+        // List that holds objects of type T
         public List<T> List { get; set; } = new List<T>();
 
-        // Optional explicit filename (can be set by caller). If null, default is used.
         public string Filename { get; private set; }
 
-        // NEW: Constructor accepts optional filename override
         public DataStore(string filename = null)
         {
             Filename = filename ?? GetDefaultFilename();
         }
 
-        // CHANGED: centralized default filename generation so it is consistent for all types
         private string GetDefaultFilename()
         {
-            return $"{typeof(T).Name.ToLower()}s.json"; // e.g. users.json, cars.json, carsearchs.json
+            return $"{typeof(T).Name.ToLower()}s.json"; 
         }
 
-        // Add item and persist immediately
+        //Adds object of the Type T
         public void AddItem(T item)
         {
             List.Add(item);
-            SaveToJson(); // CHANGED: always save on mutation
+            SaveToJson(); 
         }
 
-        // Remove item and persist immediately
+        //Remove object of the Type T
         public bool RemoveItem(T item)
         {
             bool removed = List.Remove(item);
@@ -41,24 +38,18 @@ namespace AutoCompare
             return removed;
         }
 
-        public T? FindItem(Predicate<T> predicate)
-        {
-            return List.Find(predicate);
-        }
-
-        // Save using the configured filename
+      
+        // Saving to Json 
         public void SaveToJson()
         {
             try
             {
-
-
                 var options = new JsonSerializerOptions
                 {
                     WriteIndented = true,
                     PropertyNameCaseInsensitive = true,
-                    // Preserve enum names as text by default
                 };
+                
                 var json = JsonSerializer.Serialize(List, options);
                 File.WriteAllText(Filename, json);
             }
@@ -68,18 +59,13 @@ namespace AutoCompare
             }
         }
 
-
-
-        // Load using the configured filename
+        // Loading from Json file 
         public void LoadFromJson()
         {
             try
             {
-
-
                 if (!File.Exists(Filename))
                 {
-                    // NOTE: file missing => keep List as empty (default)
                     List = new List<T>();
                     return;
                 }

@@ -26,19 +26,18 @@ public static class Config
     }
 
     public static string Get(string key)
+
     {
         Load();
         return Environment.GetEnvironmentVariable(key) ?? "";
     }
 
     public static void Require(params string[] keys)
+
     {
         Load();
-
         try
         {
-
-
             foreach (var k in keys)
             {
                 if (string.IsNullOrWhiteSpace(Get(k)))

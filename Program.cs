@@ -7,6 +7,7 @@ namespace AutoCompare
         {
             Env.Load();
             Console.OutputEncoding = System.Text.Encoding.UTF8;
+            
             var uiManager = new UIManager();
             await uiManager.Start();
             
