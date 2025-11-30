@@ -25,14 +25,12 @@ namespace AutoCompare
             _aiHelper = new AiHelper();
         }
 
-        // Ask the model about a car model. Uses chat-style messages for better multi-turn support.
-        // localContext: optional list of Car objects (small summary will be added as a system message).
         public async Task<AiResult> AskCarModelAsync(string userQuestion, IEnumerable<Car>? localContext = null)
         {
             if (string.IsNullOrWhiteSpace(userQuestion))
                 throw new ArgumentException("Question must not be empty", nameof(userQuestion));
 
-            // Build system prompt - instruct model to be factual, output optionally in markdown
+            // Build system prompt - instruct model to be factual.
             var systemPrompt = new StringBuilder();
             systemPrompt.AppendLine("You are an expert automotive assistant. Answer clearly and factually.");
             systemPrompt.AppendLine("If the user asks about a specific car model, provide structured information (Overview, Specifications, Performance, Safety, Maintenance, Common Issues).");
@@ -66,12 +64,9 @@ namespace AutoCompare
                 // Call AiHelper which sends a messages array
                 string raw = await _aiHelper.ChatMessagesAsync(messages, model: "gpt-4o-mini", maxTokens: 1000, temperature: 0.0);
 
-                // Parse returned text to AiResult (attempt JSON parse, else use markdown parsing later)
-                // If the model returns JSON, try to parse; otherwise put raw into Answer and compute a one-line summary.
                 var parsed = ParseAiResult(raw);
                 if (string.IsNullOrWhiteSpace(parsed.Summary))
                 {
-                    // If no summary provided by AI result, create a small extracted summary (first 1-2 sentences)
                     parsed.Summary = CreateShortSummary(parsed.Answer);
                 }
 
@@ -80,7 +75,6 @@ namespace AutoCompare
             catch (Exception ex)
             {
                 Logger.Log($"AskCarModelAsync error:", ex);
-                // Return a graceful error AiResult for the caller to display
                 return new AiResult
                 {
                     Answer = $"Sorry, an error occurred while fetching AI data: {ex.Message}",
@@ -91,7 +85,6 @@ namespace AutoCompare
         }
 
         // If AI returned JSON (rare), we try to parse it into AiResult.
-        // Otherwise we set Answer=raw and Summary empty.
         private AiResult ParseAiResult(string raw)
         {
             if (string.IsNullOrWhiteSpace(raw))
@@ -123,7 +116,7 @@ namespace AutoCompare
                 // Not JSON — continue below
             }
 
-            // Not JSON — return raw answer. Try to extract a sources list from "### Sources" or URLs
+            // Not JSON — return raw answer.
             var aiResult = new AiResult
             {
                 Answer = raw,
@@ -160,8 +153,6 @@ namespace AutoCompare
 
             return urls;
         }
-
-        
         public void Dispose()
         {
             if (!_disposed)

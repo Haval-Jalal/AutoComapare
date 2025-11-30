@@ -35,9 +35,6 @@ namespace AutoCompare
         }
 
         // Send a chat request using role-labelled messages.
-        // messages: list of (role, content) pairs. role should be "system", "user", or "assistant".
-        // model: model name to use (defaults to gpt-4o-mini).
-        // maxTokens: token limit for the response.
         public async Task<string> ChatMessagesAsync(IEnumerable<(string role, string content)> messages,
                                                     string model = "gpt-4o-mini",
                                                     int maxTokens = 600,
@@ -70,14 +67,12 @@ namespace AutoCompare
 
                 if (!resp.IsSuccessStatusCode)
                 {
-                    // Return a helpful exception with API body for debugging/logging
                     throw new Exception($"OpenAI API error {(int)resp.StatusCode}: {respBody}");
                 }
 
                 try
                 {
                     using var doc = JsonDocument.Parse(respBody);
-                    // Typical shape: { choices: [ { message: { role: "...", content: "..." } } ], ... }
                     var root = doc.RootElement;
                     if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
                     {

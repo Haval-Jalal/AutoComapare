@@ -10,21 +10,17 @@ namespace AutoCompare
     {
         private readonly DataStore<User> _userStore;
         
-
         private const string AdminUsername = "admin.autocompare@gmail.com";
         private const string AdminPassword = "Admin123!";
-
         public bool IsLoggedIn { get; private set; }
 
         public Admin(DataStore<User> userStore)
         {
             _userStore = userStore;
-            
         }
 
         public bool TryLogin(string username, string password)
         {
-
             if (username == AdminUsername && password == AdminPassword)
             {
                 IsLoggedIn = true;
@@ -35,8 +31,6 @@ namespace AutoCompare
             }
             return false;
         }
-
-        // NEW: Spectre.Console login prompt for the admin panel
         public bool TryLoginPrompt()
         {
             AnsiConsole.Clear();
@@ -57,7 +51,6 @@ namespace AutoCompare
                     .Secret()
                     .PromptStyle("red"));
 
-            // Validate using existing TryLogin method
             if (TryLogin(username, password))
             {
                 AnsiConsole.MarkupLine("[green]Admin access granted![/]");
@@ -90,7 +83,6 @@ namespace AutoCompare
             }
             _userStore.RemoveItem(user); // Save is handled by DataStore
             Console.WriteLine($"User '{username}' has been deleted.");
-            
         }
 
         public void ShowLogFiles()
@@ -147,6 +139,7 @@ namespace AutoCompare
                 Console.WriteLine(line);
             Console.WriteLine("==============================\n");
         }
+       
         // Display AI chat/search history interactively for all users or a specific user
         public void ShowAiSearchHistoryInteractive()
         {
