@@ -27,6 +27,14 @@ namespace AutoCompare
         }
         private void ShowGuestMenu()
         {
+            ShowHeaderSectionLayout(
+                 "AutoCompare",
+                 "Your gateway to smart car comparisons.",
+                 "Please register or login to continue.",
+                 Color.Green,
+                 Color.Yellow,
+                 Color.White);
+
             var menu = new SelectionPrompt<string>()
                 .Title("[yellow]Select an option:[/]")
                 .PageSize(10)
@@ -50,8 +58,16 @@ namespace AutoCompare
 
         private async Task ShowUserMenu()
         {
+            ShowHeaderSectionLayout(
+                "User Menu",
+                $"Logged in as: {_loggedInUser}",
+                "Select an option to proceed.",
+                Color.Green,
+                Color.Yellow,
+                Color.White);
+
             var menu = new SelectionPrompt<string>()
-                .Title($"[yellow]Welcome {_loggedInUser}! Choose an option:[/]")
+                .Title($"[yellow] Choose an option:[/]")
                 .PageSize(10)
                 .AddChoices(
                     "🚗 Search Car",
@@ -86,9 +102,20 @@ namespace AutoCompare
         // CHANGED: Register now uses the shared _userStore and DOES NOT call LoadFromJson
         private void Register()
         {
-            AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]");
-            AnsiConsole.MarkupLine("[bold green]📝 Registration[/]");
-            AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]\n");
+            ShowHeaderSectionLayout(
+                "User Registration",
+                "Create a new account to get started.",
+                "Please provide a valid email and a strong password.",
+                Color.Green,
+                Color.Yellow,
+                Color.White);
+
+            var menu = new SelectionPrompt<string>()
+                .Title("[yellow]Select an option:[/]")
+                .AddChoices("📝 Register New Account", "🔙 Back to Main Menu");
+            var choice = AnsiConsole.Prompt(menu);
+            if (choice == "🔙 Back to Main Menu")
+                return;
 
             var username = AnsiConsole.Ask<string>(
                 "[yellow]Enter email[/] [grey](type 'exit' to go back)[/]:").Trim();
@@ -134,7 +161,7 @@ namespace AutoCompare
                 new SelectionPrompt<TwoFactorMethod>()
                     .Title("[yellow]Choose 2FA method:[/]")
                     .AddChoices(TwoFactorMethod.Email, TwoFactorMethod.SMS));
-            
+
             string? contact = null;
 
             if (method == TwoFactorMethod.Email)
@@ -164,9 +191,16 @@ namespace AutoCompare
         {
             while (_admin.IsLoggedIn)
             {
-                AnsiConsole.Clear();
+                ShowHeaderSectionLayout(
+                    "Admin Panel",
+                    "Manage users and view logs.",
+                    "Select an option to proceed.",
+                    Color.Red,
+                    Color.Yellow,
+                    Color.White);
+
                 var options = new SelectionPrompt<string>()
-                    .Title("[red]ADMIN PANEL[/]")
+                    .Title("[red]ADMIN OPTIONS:[/]")
                     .AddChoices("Show All Users", "Show AI Search History", "Delete User", "Show Log Files", "Read Log File", "Exit Admin");
 
                 var choice = AnsiConsole.Prompt(options);
@@ -180,8 +214,7 @@ namespace AutoCompare
                         _admin.ShowAiSearchHistoryInteractive();
                         break;
                     case "Delete User":
-                        string userToDelete = AnsiConsole.Ask<string>("User to delete:");
-                        _admin.DeleteUser(userToDelete);
+                        _admin.DeleteUser();
                         Pause();
                         break;
                     case "Show Log Files":
@@ -200,13 +233,18 @@ namespace AutoCompare
         }
         private void ShowAbout()
         {
+            ShowHeaderSectionLayout(
+                "About Us",
+                "Learn more about AutoCompare.",
+                "AutoCompare is dedicated to providing users with comprehensive information about vehicles to facilitate informed purchasing decisions.",
+                Color.Green,
+                Color.Yellow,
+                Color.White);
+
             AnsiConsole.MarkupLine("[green]AutoCompare[/]");
             AnsiConsole.MarkupLine("AutoCompare helps you further investigate and find information about cars. You provide a registration number - we provide the information.");
             AnsiConsole.MarkupLine("Our goal is to ensure our users makes a risk-free purchase by providing detailed information about the cars you're browsing.\n");
 
-            //AnsiConsole.MarkupLine("[yellow]Press any key to go back to the main menu...[/]");
-            //Console.ReadKey(true);
-            // Back-knapp via SelectionPrompt
             var menu = new SelectionPrompt<string>()
                 .Title("[yellow]Tryck 'Back' för att återgå till huvudmenyn[/]")
                 .AddChoices("🔙 Back");
@@ -215,13 +253,22 @@ namespace AutoCompare
 
             // När användaren väljer "Back" returnerar metoden och användaren är tillbaka i ShowUserMenu
         }
-
-
         private void Login()
         {
-            AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]");
-            AnsiConsole.MarkupLine("[bold green]🔐 Login[/]");
-            AnsiConsole.MarkupLine("[green]──────────────────────────────────────────────────────────[/]\n");
+            ShowHeaderSectionLayout(
+                "User Login",
+                "Access your account to continue.",
+                "Please enter your registered email and password.",
+                Color.Green,
+                Color.Yellow,
+                Color.White);
+
+            var menu = new SelectionPrompt<string>()
+                .Title("[yellow]Select an option:[/]")
+                .AddChoices("🔐 Login to Account", "🔙 Back to Main Menu");
+            var choice = AnsiConsole.Prompt(menu);
+            if (choice == "🔙 Back to Main Menu")
+                return;
 
             var username = AnsiConsole.Ask<string>(
                 "[yellow]Enter email[/] [grey](type 'exit' to go back)[/]:").Trim();
@@ -309,6 +356,14 @@ namespace AutoCompare
 
         private void Logout()
         {
+            ShowHeaderSectionLayout(
+                "Logout",
+                "You have chosen to log out.",
+                "Thank you for using AutoCompare. See you next time!",
+                Color.Green,
+                Color.Yellow,
+                Color.White);
+
             if (_loggedInUser != null)
             {
                 AnsiConsole.MarkupLine($"[grey]{_loggedInUser} logged out.[/]");
@@ -325,12 +380,13 @@ namespace AutoCompare
             bool running = true;
             while (running)
             {
-                AnsiConsole.Clear();
-                AnsiConsole.Write(
-                    new FigletText("Car Search")
-                        .Centered()
-                        .Color(Color.Green));
-                AnsiConsole.WriteLine();
+                ShowHeaderSectionLayout(
+                    "Car Search Menu",
+                    "Search for cars by registration number.",
+                    "Choose an option to proceed.",
+                    Color.Green,
+                    Color.Yellow,
+                    Color.White);
 
                 var menu = new SelectionPrompt<string>()
                     .Title("[yellow]Search Car Menu:[/]")
@@ -357,6 +413,14 @@ namespace AutoCompare
 
         private void ManageProfile()
         {
+            ShowHeaderSectionLayout(
+                "Manage Profile",
+                "Update your password or delete your account.",
+                "Choose an option to proceed.",
+                Color.Green,
+                Color.Yellow,
+                Color.White);
+
             var user = _userStore.List.First(u => u.Username == _loggedInUser);
             var menu = new SelectionPrompt<string>()
                 .Title("[yellow]Manage Profile:[/]")
@@ -519,14 +583,6 @@ namespace AutoCompare
 
                 while (true)
                 {
-                    AnsiConsole.Clear();
-
-                    var title = new FigletText("AutoCompare")
-                        .Centered()
-                        .Color(Color.Green);
-                    AnsiConsole.Write(title);
-                    AnsiConsole.WriteLine();
-
                     if (_loggedInUser == null)
                     {
                         ShowGuestMenu();
@@ -555,118 +611,126 @@ namespace AutoCompare
         // AskAiChatLoop: ChatGPT-style multi-turn AI chat for cars with minimal emojis and clean output
         private async Task AskAiChatLoop()
         {
+            ShowHeaderSectionLayout(
+                "AI Car Chat",
+                "Ask about car models and get expert advice.",
+                "Have a conversation with our AI assistant about car models.",
+                Color.Cyan,
+                Color.Yellow,
+                Color.White);
+
             try
-            { 
-            AnsiConsole.MarkupLine("[cyan]🚗 AI Car Chat — ask about car models (type 'exit' to go back)[/]");
-            var helper = new AiHelper(); // AiHelper reads OPENAI_API_KEY from env
-
-            const string systemInstruction =
-                "You are an expert automotive assistant. Answer clearly and factually. " +
-                "Use minimal headings, but emojis are allowed to mark pros, cons, and tips. " +
-                "✅ = positive / advantage, ⚠️ = caution / drawback, 🛠️ = maintenance / tip. " +
-                "When user asks follow-up questions, remember prior conversation context.";
-
-            var convo = new List<(string role, string content)> { ("system", systemInstruction) };
-            const int maxTurnsToKeep = 12;
-
-            while (true)
             {
-                string userInput = AnsiConsole.Ask<string>("You:").Trim();
-                if (string.IsNullOrWhiteSpace(userInput)) continue;
-                if (userInput.Equals("exit", StringComparison.OrdinalIgnoreCase)) break;
+                AnsiConsole.MarkupLine("[cyan]🚗 AI Car Chat — ask about car models (type 'exit' to go back)[/]");
+                var helper = new AiHelper(); // AiHelper reads OPENAI_API_KEY from env
 
-                convo.Add(("user", userInput));
+                const string systemInstruction =
+                    "You are an expert automotive assistant. Answer clearly and factually. " +
+                    "Use minimal headings, but emojis are allowed to mark pros, cons, and tips. " +
+                    "✅ = positive / advantage, ⚠️ = caution / drawback, 🛠️ = maintenance / tip. " +
+                    "When user asks follow-up questions, remember prior conversation context.";
 
-                // Keep recent context + system message
-                if (convo.Count > maxTurnsToKeep)
+                var convo = new List<(string role, string content)> { ("system", systemInstruction) };
+                const int maxTurnsToKeep = 12;
+
+                while (true)
                 {
-                    var sys = convo.First(t => t.role == "system");
-                    var tail = convo.Where(t => t.role != "system").Skip(Math.Max(0, convo.Count - maxTurnsToKeep)).ToList();
-                    convo = new List<(string role, string content)> { sys };
-                    convo.AddRange(tail);
+                    string userInput = AnsiConsole.Ask<string>("You:").Trim();
+                    if (string.IsNullOrWhiteSpace(userInput)) continue;
+                    if (userInput.Equals("exit", StringComparison.OrdinalIgnoreCase)) break;
+
+                    convo.Add(("user", userInput));
+
+                    // Keep recent context + system message
+                    if (convo.Count > maxTurnsToKeep)
+                    {
+                        var sys = convo.First(t => t.role == "system");
+                        var tail = convo.Where(t => t.role != "system").Skip(Math.Max(0, convo.Count - maxTurnsToKeep)).ToList();
+                        convo = new List<(string role, string content)> { sys };
+                        convo.AddRange(tail);
+                    }
+
+                    string assistantReply = string.Empty;
+
+                    try
+                    {
+                        assistantReply = await helper.ChatMessagesAsync(convo, model: "gpt-4o-mini", maxTokens: 1200, temperature: 0.0);
+                    }
+                    catch (Exception ex)
+                    {
+
+                        AnsiConsole.MarkupLine($"[red]AI error:[/] {EscapeMarkup(ex.Message)}");
+                        convo.RemoveAt(convo.Count - 1); // remove user message so not resent
+                        Logger.Log("AskAiChatLoop.AI:", ex);
+                        continue;
+                    }
+
+                    convo.Add(("assistant", assistantReply));
+
+                    // Display assistant reply nicely
+                    AnsiConsole.WriteLine();
+                    AnsiConsole.MarkupLine("[green]🤖 AI:[/]");
+                    foreach (var line in assistantReply.Split('\n'))
+                    {
+                        string trimmed = line.Trim();
+
+                        if (trimmed.StartsWith("Pros:", StringComparison.OrdinalIgnoreCase) ||
+                            trimmed.StartsWith("✅"))
+                        {
+                            AnsiConsole.MarkupLine($"[green]{EscapeMarkup(trimmed)}[/]");
+                        }
+                        else if (trimmed.StartsWith("Cons:", StringComparison.OrdinalIgnoreCase) ||
+                                trimmed.StartsWith("⚠️"))
+                        {
+                            AnsiConsole.MarkupLine($"[yellow]{EscapeMarkup(trimmed)}[/]");
+                        }
+                        else if (trimmed.StartsWith("Tip:", StringComparison.OrdinalIgnoreCase) ||
+                                trimmed.StartsWith("🛠️"))
+                        {
+                            AnsiConsole.MarkupLine($"[cyan]{EscapeMarkup(trimmed)}[/]");
+                        }
+                        else
+                        {
+                            AnsiConsole.WriteLine(EscapeMarkup(trimmed));
+                        }
+                    }
+                    AnsiConsole.WriteLine();
+
+                    // Follow-up or finish
+                    var next = AnsiConsole.Prompt(
+                        new SelectionPrompt<string>()
+                            .Title("Choose next action:")
+                            .AddChoices(new[] { "Ask follow-up", "Finish chat" })
+                    );
+
+                    if (next == "Finish chat") break;
                 }
 
-                string assistantReply = string.Empty;
-
+                // Save a short summary to user's search history
                 try
                 {
-                    assistantReply = await helper.ChatMessagesAsync(convo, model: "gpt-4o-mini", maxTokens: 1200, temperature: 0.0);
-                }
-                catch (Exception ex)
-                {
-                    
-                    AnsiConsole.MarkupLine($"[red]AI error:[/] {EscapeMarkup(ex.Message)}");
-                    convo.RemoveAt(convo.Count - 1); // remove user message so not resent
-                    Logger.Log("AskAiChatLoop.AI:", ex);
-                    continue;
-                }
-
-                convo.Add(("assistant", assistantReply));
-
-                // Display assistant reply nicely
-                AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[green]🤖 AI:[/]");
-                foreach (var line in assistantReply.Split('\n'))
-                {
-                    string trimmed = line.Trim();
-
-                    if (trimmed.StartsWith("Pros:", StringComparison.OrdinalIgnoreCase) ||
-                        trimmed.StartsWith("✅"))
+                    var user = _userStore.List.FirstOrDefault(u => u.Username == _loggedInUser);
+                    if (user != null)
                     {
-                        AnsiConsole.MarkupLine($"[green]{EscapeMarkup(trimmed)}[/]");
-                    }
-                    else if (trimmed.StartsWith("Cons:", StringComparison.OrdinalIgnoreCase) ||
-                            trimmed.StartsWith("⚠️"))
-                    {
-                        AnsiConsole.MarkupLine($"[yellow]{EscapeMarkup(trimmed)}[/]");
-                    }
-                    else if (trimmed.StartsWith("Tip:", StringComparison.OrdinalIgnoreCase) ||
-                            trimmed.StartsWith("🛠️"))
-                    {
-                        AnsiConsole.MarkupLine($"[cyan]{EscapeMarkup(trimmed)}[/]");
-                    }
-                    else
-                    {
-                        AnsiConsole.WriteLine(EscapeMarkup(trimmed));
+                        var lastAssistant = convo.LastOrDefault(t => t.role == "assistant").content ?? string.Empty;
+                        var summary = lastAssistant.Length > 200 ? lastAssistant.Substring(0, 197) + "..." : lastAssistant;
+                        string entry = $"{DateTime.UtcNow:yyyy-MM-dd HH:mm} | 🤖 {EscapeMarkup(summary)}";
+                        user.SearchHistory ??= new List<string>();
+                        user.SearchHistory.Add(entry);
+                        _userStore.SaveToJson();
                     }
                 }
-                AnsiConsole.WriteLine();
-
-                // Follow-up or finish
-                var next = AnsiConsole.Prompt(
-                    new SelectionPrompt<string>()
-                        .Title("Choose next action:")
-                        .AddChoices(new[] { "Ask follow-up", "Finish chat" })
-                );
-
-                if (next == "Finish chat") break;
-            }
-
-            // Save a short summary to user's search history
-            try
-            {
-                var user = _userStore.List.FirstOrDefault(u => u.Username == _loggedInUser);
-                if (user != null)
+                catch
                 {
-                    var lastAssistant = convo.LastOrDefault(t => t.role == "assistant").content ?? string.Empty;
-                    var summary = lastAssistant.Length > 200 ? lastAssistant.Substring(0, 197) + "..." : lastAssistant;
-                    string entry = $"{DateTime.UtcNow:yyyy-MM-dd HH:mm} | 🤖 {EscapeMarkup(summary)}";
-                    user.SearchHistory ??= new List<string>();
-                    user.SearchHistory.Add(entry);
-                    _userStore.SaveToJson();
+                    // don't block user if save fails
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // don't block user if save fails
+                Logger.Log("AskAiChatLoop:", ex);
+                AnsiConsole.MarkupLine($"[red]Critical error in AI chat: [/] {EscapeMarkup(ex.Message)}");
             }
         }
-        catch (Exception ex)
-            {
-            Logger.Log("AskAiChatLoop:", ex);
-            AnsiConsole.MarkupLine($"[red]Critical error in AI chat: [/] {EscapeMarkup(ex.Message)}"); 
-            }
-         }
 
         // Escape text safely for Spectre.Console
         private string EscapeMarkup(string text)
@@ -681,5 +745,25 @@ namespace AutoCompare
                 return text.Replace("[", "(").Replace("]", ")");
             }
         }
+
+        public void ShowHeaderSectionLayout(string figletTitle, string ruleTitle, string rulemessage, Color panelColor, Color ruletitle, Color messagecolor)
+        {
+            AnsiConsole.Clear();
+            var title = new FigletText(figletTitle)
+                .Centered()
+                .Color(panelColor);
+            AnsiConsole.Write(title);
+            AnsiConsole.WriteLine();
+
+            AnsiConsole.Write(
+               new Rule($"[bold {ruletitle}]{ruleTitle}[/]")
+                   .RuleStyle(Style.Parse(ruletitle.ToString()))
+                   .Centered());
+            AnsiConsole.WriteLine();
+
+            AnsiConsole.Write(new Markup($"[italic {messagecolor}]{rulemessage}[/]"));
+            AnsiConsole.WriteLine();
+            AnsiConsole.WriteLine();
+        }
     }
-}    
+}
